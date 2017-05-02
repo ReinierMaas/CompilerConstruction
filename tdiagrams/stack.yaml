@@ -1,0 +1,7 @@
+flags: {}
+extra-package-dbs: []
+packages:
+- '.'
+extra-deps:
+- uu-cco-0.1.0.5
+resolver: lts-8.12
