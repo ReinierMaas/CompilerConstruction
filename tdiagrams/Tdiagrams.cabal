@@ -1,0 +1,61 @@
+name:                  Tdiagrams
+version:               0.0.5.0
+synopsis:              Utilities for drawing T-diagrams in LaTeX
+description:           Project distribution for Mini Project B of the course on
+                       Compiler Construction (INFOMCCO) at Utrecht University.
+license:               AllRightsReserved
+license-file:          LICENSE
+category:              Compilers/Interpreters
+copyright:             (c) 2008-2014 Utrecht University
+author:                Stefan Holdermans
+maintainer:            Stefan Holdermans <stefan@cs.uu.nl>
+stability:             provisional
+homepage:              http://www.cs.uu.nl/wiki/Cco/MiniProjects
+tested-with:           GHC == 6.8.2, GHC == 6.8.3, GHC == 6.10.1
+build-type:            Simple
+cabal-version:         >= 1.8
+extra-source-files:    AUTHORS, Makefile, lib/CCO/Diag/AG.ag,
+                       lib/CCO/Diag/AG/Base.ag, lib/CCO/Picture/AG.ag,
+                       lib/CCO/Picture/AG/Base.ag,
+                       lib/CCO/Picture/AG/Printing.ag
+
+library
+  hs-source-dirs:      lib
+  exposed-modules:     CCO.Diag
+                     , CCO.Diag.AG
+                     , CCO.Diag.Base
+                     , CCO.Diag.Lexer
+                     , CCO.Diag.Parser
+                     , CCO.Picture
+                     , CCO.Picture.AG
+  build-depends:     base, uu-cco >= 0.1.0.1
+
+executable parse-tdiag
+  main-is:             ParseTDiag.hs
+  build-depends:       base, uu-cco >= 0.1.0.1, Tdiagrams
+  hs-source-dirs:      bin
+
+executable pp-picture
+  main-is:             PpPicture.hs
+  build-depends:       base, uu-cco >= 0.1.0.1, Tdiagrams
+  hs-source-dirs:      bin
+
+executable tc-tdiag
+  main-is:             TcTDiag.hs
+  build-depends:       base, uu-cco >= 0.1.0.1, Tdiagrams
+  hs-source-dirs:      bin
+
+executable tdiag2picture
+  main-is:             TDiag2Picture.hs
+  build-depends:       base, uu-cco >= 0.1.0.1, Tdiagrams
+  hs-source-dirs:      bin
+
+executable tdiagrams-test
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base
+                     , QuickCheck
+                     , uu-cco >= 0.1.0.1
+                     , silently >= 1.2.4.1
+                     , Tdiagrams
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
