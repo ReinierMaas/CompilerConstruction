@@ -57,6 +57,8 @@ correctPrograms = [
     "platform x86",
     "execute program hello in Haskell on interpreter hugs for Haskell in x86-windows end",
     "execute interpreter hugs for Haskell in x86-windows on platform x86-windows end",
+    "execute program hello in Haskell on interpreter hugs for Haskell in i686-windows end",
+    "compile program hello in UUAG with compiler uuagc from UUAG to Haskell in i686-windows end",
     "execute compile program hello in UUAG with compiler uuagc from UUAG to Haskell in i686-windows end on interpreter hugs for Haskell in i686-windows end",
     "execute execute compile program hello in UUAG with compiler uuagc from UUAG to Haskell in i686-windows end on platform i686-windows end on interpreter hugs for Haskell in i686-windows end" ]
 
