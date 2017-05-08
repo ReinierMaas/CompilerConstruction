@@ -30,7 +30,7 @@ executeCombine (Compiling o m1) plat =
                    then Program o
                    else if m2 == o
                        then Execute
-                       else Error $ show m1 ++ " should be equal to either " ++ m2 ++ " or " ++ o
+                       else Error $ m2 ++ " should be equal to either " ++ m1 ++ " or " ++ o
         Nothing -> Error $ show plat ++ " is not a subtype of Platform " ++ m1
 executeCombine prog plat =
     case asProgram prog of
