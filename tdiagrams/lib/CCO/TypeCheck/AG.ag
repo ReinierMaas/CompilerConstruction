@@ -1,0 +1,3 @@
+module {CCO.TypeCheck.AG}{}{}
+
+include "AG/Base.ag"

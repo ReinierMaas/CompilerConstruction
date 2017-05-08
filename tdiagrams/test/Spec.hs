@@ -4,6 +4,7 @@ import CCO.Feedback (runFeedback)
 import System.IO (stderr)
 import System.IO.Error (tryIOError)
 import System.IO.Silently (hSilence)
+
 import qualified CCO.Diag as D
 
 main :: IO ()

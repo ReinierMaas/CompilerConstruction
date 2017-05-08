@@ -1,6 +1,10 @@
+import CCO.Component (component, printer, ioWrap, Component)
+import CCO.Diag (Diag)
+import CCO.Feedback (Feedback)
+import CCO.Tree (parser, Tree (fromTree, toTree))
+import Control.Arrow (Arrow (arr), (>>>))
 
+typeChecker :: Diag -> Feedback Diag
+typeChecker = undefined
 
--- Input: ATerms produced by ParseTDiag
--- Typecheck the represented diagrams
--- Output: ATerms / error messages when ATerm is ill-formed
-main = putStrLn "Hello worlds"
+main = ioWrap (parser >>> component toTree >>> component typeChecker >>> arr fromTree >>> printer)
