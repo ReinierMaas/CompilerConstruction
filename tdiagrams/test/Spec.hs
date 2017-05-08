@@ -27,9 +27,15 @@ correct p = do
 correctPrograms :: [String]
 correctPrograms = [
     "program hello in Haskell",
-    "platform x86" ]
+    "platform x86",
+    "execute program hello in Haskell on interpreter hugs for Haskell in x86-windows end" ]
 
 wrongPrograms :: [String]
 wrongPrograms = [
     "program hello",
     "platform" ]
+
+typeIncorrectPrograms :: [String]
+typeIncorrectPrograms = [
+    "execute platform x86 on platform ARM",
+    ]

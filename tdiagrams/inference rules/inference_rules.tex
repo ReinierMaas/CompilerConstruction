@@ -1,0 +1,63 @@
+\documentclass{article}
+
+\usepackage{mathpartir}
+
+\author{
+  Reinier Maas \\ 4131495
+  \and
+  Adolfo Ochagavía \\ 4045483
+}
+\title{T-Diagram inference rules}
+\begin{document}
+
+\maketitle
+
+% See docs on http://www.ccs.neu.edu/course/csg264/latex/mathpartir/mathpartir.pdf
+
+\section*{Basic terms}
+
+\[
+\inferrule[Program]{\ }{program\ P\ in\ L : Program\ L}
+\]
+
+\[
+\inferrule[Platform]{\ }{platform\ M : Platform\ M}
+\]
+
+\[
+\inferrule[Interpreter]{\ }{interpreter\ I\ for\ L\ in\ M : Interpreter\ L\ M}
+\]
+
+\[
+\inferrule[Compiler]{\ }{compiler\ C\ from\ I\ to\ O\ in\ M\ :\ Compiler\ I\ O\ M}
+\]
+
+\section*{Subtyping}
+
+\[
+\inferrule[InterpreterIsProgram]{i : Interpreter\ L\ M}{i : Program\ M}
+\]
+
+\[
+\inferrule[InterpreterIsPlatform]{i : Interpreter\ L\ M}{i : Platform\ L}
+\]
+
+\[
+\inferrule[CompilerIsProgram]{c : Compiler\ I\ O\ M}{c : Program\ M}
+\]
+
+\section*{Recursive termsweweb}
+
+\[
+\inferrule[ExecuteProgram]{p : Program\ L \qquad m : Platform\ L}{execute\ p\ on\ m : Execute}
+\]
+
+\[
+\inferrule[ExecuteCompiled]{c : Compiled\ O\ M \qquad m : Platform\ M}{execute\ c\ on\ m : Program\ O}
+\]
+
+\[
+\inferrule[Compile]{p : Program\ L \qquad c : Compiler\ L\ O\ M}{compile\ p\ with\ c\ end : Compiled\ O\ M}
+\]
+
+\end{document}
