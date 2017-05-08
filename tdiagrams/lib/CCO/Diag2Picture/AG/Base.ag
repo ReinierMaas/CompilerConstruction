@@ -1,0 +1,71 @@
+imports
+{
+import qualified CCO.Diag2Picture.Util as U
+}
+
+attr Diag Diag_
+  inh   pos :: {(Int, Int)}
+  syn   cmds :: Commands
+      , size :: {(Int, Int)}
+
+sem Diag
+  | Diag        d  .pos  = @lhs.pos
+                lhs.cmds = @d.cmds
+                   .size = @d.size
+
+sem Diag_
+  | Program     lhs.cmds =  [ Put (7.5,  0)  (Line     (1,  0)  50)
+                            , Put (7.5,  0)  (Line     (0,  1)  15)
+                            , Put (7.5,  15) (Line     (-1, 2)  7.5)
+                            , Put (57.5, 15) (Line     (1,  2)  7.5)
+                            , Put (57.5, 0)  (Line     (0,  1)  15)
+                            , Put (0,    30) (Line     (1,  0)  65)
+                            , Put (7.5,  15) (Makebox  (50, 15) @p)
+                            , Put (7.5,  0)  (Makebox  (50, 15) @l)
+                            ]
+                   .size = (fst @lhs.pos + 65, snd @lhs.pos + 30)
+
+  | Platform    lhs.cmds =  [ Put (0,    15) (Line     (5,  -3) 25)
+                            , Put (25,   0)  (Line     (5,  3)  25)
+                            , Put (0,    15) (Line     (0,  1)  15)
+                            , Put (0,    30) (Line     (1,  0)  50)
+                            , Put (50,   30) (Line     (0,  -1) 15)
+                            , Put (7.5,  15) (Makebox  (50, 15) @m)
+                            ]
+                   .size = (fst @lhs.pos + 50, snd @lhs.pos + 30)
+
+  | Interpreter lhs.cmds =  [ Put (0,    0)  (Framebox (50, 30) "")
+                            , Put (0,    20) (Makebox  (50, 10) @l)
+                            , Put (0,    10) (Makebox  (50, 10) @i)
+                            , Put (0,    0)  (Makebox  (50, 10) @m)
+                            ]
+                   .size = (fst @lhs.pos + 50, snd @lhs.pos + 30)
+
+  | Compiler    lhs.cmds =  [ Put (50,   0)  (Line     (0,  1)  20)
+                            , Put (50,   20) (Line     (-1, 0)  50)
+                            , Put (0,    20) (Line     (0,  1)  10)
+                            , Put (0,    30) (Line     (1,  0)  150)
+                            , Put (150,  30) (Line     (0,  -1) 10)
+                            , Put (150,  20) (Line     (-1, 0)  50)
+                            , Put (100,  20) (Line     (0,  -1) 20)
+                            , Put (100,  0)  (Line     (-1, 0)  50)
+                            , Put (0,    20) (Makebox  (50, 10) @l1)
+                            , Put (50,   20) (Makebox  (50, 10) {"$\\longrightarrow$"})
+                            , Put (100,  20) (Makebox  (50, 10) @l2)
+                            , Put (50,   10) (Makebox  (50, 10) @c)
+                            , Put (50,   0)  (Makebox  (50, 10) @m)
+                            ]
+                   .size = (fst @lhs.pos + 150, snd @lhs.pos + 30)
+
+  | Execute     d1 .pos = @lhs.pos
+                d2 .pos = @lhs.pos
+                lhs.cmds = @d1.cmds ++ @d2.cmds
+                   .size = maxSize @d1.size @d2.size
+  | Compile     d1 .pos = @lhs.pos
+                d2 .pos = @lhs.pos
+                lhs.cmds = @d1.cmds ++ @d2.cmds
+                   .size = maxSize @d1.size @d2.size
+
+{
+  maxSize (a1,b1) (a2,b2) = (max a1 a2, max b1 b2)
+}

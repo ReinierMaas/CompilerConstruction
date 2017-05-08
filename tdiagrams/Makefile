@@ -1,16 +1,23 @@
 all : build
 
-lib/CCO/Diag/AG.hs : lib/CCO/Diag/AG.ag lib/CCO/Diag/AG/Base.ag
+diag : lib/CCO/Diag/AG.ag lib/CCO/Diag/AG/Base.ag
 	uuagc -Hdcfws -P lib/CCO/Diag lib/CCO/Diag/AG.ag
 
-lib/CCO/TypeCheck/AG.hs : lib/CCO/TypeCheck/AG.ag lib/CCO/TypeCheck/AG/Base.ag
+typecheck : lib/CCO/TypeCheck/AG.ag lib/CCO/TypeCheck/AG/Base.ag \
+ 		lib/CCO/Diag/AG.ag lib/CCO/Diag/AG/Base.ag
 	uuagc -Hdcfws -P lib/CCO/TypeCheck lib/CCO/TypeCheck/AG.ag
 
-lib/CCO/Picture/AG.hs : lib/CCO/Picture/AG.ag lib/CCO/Picture/AG/Base.ag \
+diag2picture : lib/CCO/Diag2Picture/AG.ag lib/CCO/Diag2Picture/AG/Base.ag \
+		lib/CCO/Diag/AG.ag lib/CCO/Diag/AG/Base.ag \
+		lib/CCO/Picture/AG.ag lib/CCO/Picture/AG/Base.ag \
+		lib/CCO/Picture/AG/Printing.ag
+	uuagc -Hdcfws -P lib/CCO/Diag2Picture lib/CCO/Diag2Picture/AG.ag
+
+picture : lib/CCO/Picture/AG.ag lib/CCO/Picture/AG/Base.ag \
 		lib/CCO/Picture/AG/Printing.ag
 	uuagc -Hdcfws -P lib/CCO/Picture lib/CCO/Picture/AG.ag
+haskell : diag typecheck diag2picture picture
 
-haskell : lib/CCO/Diag/AG.hs lib/CCO/TypeCheck/AG.hs lib/CCO/Picture/AG.hs
 
 build : haskell
 	stack build
