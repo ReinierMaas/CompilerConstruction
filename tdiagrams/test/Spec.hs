@@ -37,5 +37,5 @@ wrongPrograms = [
 
 typeIncorrectPrograms :: [String]
 typeIncorrectPrograms = [
-    "execute platform x86 on platform ARM",
+    "execute platform x86 on platform ARM"
     ]
