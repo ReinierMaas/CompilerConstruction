@@ -26,6 +26,9 @@ library
                      , CCO.Diag.Base
                      , CCO.Diag.Lexer
                      , CCO.Diag.Parser
+                     , CCO.TypeCheck
+                     , CCO.TypeCheck.AG
+                     , CCO.TypeCheck.Util
                      , CCO.Picture
                      , CCO.Picture.AG
   build-depends:     base, uu-cco >= 0.1.0.1

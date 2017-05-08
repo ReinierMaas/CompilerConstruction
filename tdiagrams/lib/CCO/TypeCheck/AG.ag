@@ -1,3 +1,4 @@
 module {CCO.TypeCheck.AG}{}{}
 
+include "../Diag/AG/Base.ag"
 include "AG/Base.ag"

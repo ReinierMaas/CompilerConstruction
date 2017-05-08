@@ -1,0 +1,18 @@
+imports
+{
+import qualified CCO.TypeCheck.Util as T
+}
+
+attr Diag Diag_
+  syn   ty :: {T.Type}
+
+sem Diag
+  | Diag lhs.ty = @d.ty
+
+sem Diag_
+  | Program lhs.ty = T.Program @l
+  | Platform lhs.ty = T.Platform @m
+  | Interpreter lhs.ty = T.Interpreter @l @m
+  | Compiler lhs.ty = T.Compiler @l1 @l2 @m
+  | Execute lhs.ty = T.executeCombine @d1.ty @d2.ty
+  | Compile lhs.ty = T.compileCombine @d1.ty @d2.ty

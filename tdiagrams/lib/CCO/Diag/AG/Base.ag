@@ -22,8 +22,12 @@ data Diag_
   | Execute      d1 :: Diag     d2 :: Diag
   | Compile      d1 :: Diag     d2 :: Diag
 
+deriving Diag_ : Show
+
 data Diag
   | Diag  pos  :: {SourcePos}  d :: Diag_
+
+deriving Diag : Show
 
 -------------------------------------------------------------------------------
 -- Tree instances
@@ -44,7 +48,7 @@ instance Tree Diag_ where
   fromTree (Execute d1 d2)      = App "Execute" [fromTree d1, fromTree d2]
   fromTree (Compile d1 d2)      = App "Compile" [fromTree d1, fromTree d2]
 
-  toTree = parseTree 
+  toTree = parseTree
              [ app "Program"     (Program     <$> arg <*> arg                )
              , app "Platform"    (Platform    <$> arg                        )
              , app "Interpreter" (Interpreter <$> arg <*> arg <*> arg        )
