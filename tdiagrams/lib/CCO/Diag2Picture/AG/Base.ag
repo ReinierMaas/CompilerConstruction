@@ -32,7 +32,7 @@ sem Diag_
                             , Put (7.5,  15) (Makebox  (50, 15) @p)
                             , Put (7.5,  0)  (Makebox  (50, 15) @l)
                             ]
-                   .size = (fst @lhs.pos + 65, snd @lhs.pos + 30)
+                   .size = (65, 30)
 
   | Platform    lhs.cmds = map (offsetCommand @lhs.pos)
                             [ Put (0,    15) (Line     (5,  -3) 25)
@@ -42,7 +42,7 @@ sem Diag_
                             , Put (50,   30) (Line     (0,  -1) 15)
                             , Put (7.5,  15) (Makebox  (50, 15) @m)
                             ]
-                   .size = (fst @lhs.pos + 50, snd @lhs.pos + 30)
+                   .size = (50, 30)
 
   | Interpreter lhs.cmds = map (offsetCommand @lhs.pos)
                             [ Put (0,    0)  (Framebox (50, 30) "")
@@ -50,7 +50,7 @@ sem Diag_
                             , Put (0,    10) (Makebox  (50, 10) @i)
                             , Put (0,    0)  (Makebox  (50, 10) @m)
                             ]
-                   .size = (fst @lhs.pos + 50, snd @lhs.pos + 30)
+                   .size = (50, 30)
 
   | Compiler    lhs.cmds = map (offsetCommand @lhs.pos)
                             [ Put (50,   0)  (Line     (0,  1)  20)
@@ -67,18 +67,26 @@ sem Diag_
                             , Put (50,   10) (Makebox  (50, 10) @c)
                             , Put (50,   0)  (Makebox  (50, 10) @m)
                             ]
-                   .size = (fst @lhs.pos + 150, snd @lhs.pos + 30)
+                   .size = (150, 30)
 
-  | Execute     d1 .pos = @lhs.pos
-                d2 .pos = @lhs.pos
+  | Execute     d1 .pos = addPos @lhs.pos (0, height @d2.size)
+                d2 .pos = addPos @lhs.pos (width @d1.size / 2 - 25, 0)
                 lhs.cmds = @d1.cmds ++ @d2.cmds
-                   .size = maxSize @d1.size @d2.size
-  | Compile     d1 .pos = @lhs.pos
-                d2 .pos = @lhs.pos
+                   .size = addSize @d1.size (0, height @d2.size)
+  | Compile     d1 .pos = addPos @lhs.pos (0, height @d2.size - 10)
+                d2 .pos = addPos @lhs.pos (57.5, 0)
                 lhs.cmds = @d1.cmds ++ @d2.cmds
-                   .size = maxSize @d1.size @d2.size
+                   .size = addSize @d1.size (width @d2.size + 50, height @d2.size - 10)
 
 {
+width = fst
+height = snd
+
+addSize = addPos
+
+addPos :: (Double, Double) -> (Double, Double) -> (Double, Double)
+addPos (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
+
 offsetCommand :: (Double, Double) -> Command -> Command
 offsetCommand (offX, offY) (Put (x, y) obj) = Put (offX + x, offY + y) obj
 
