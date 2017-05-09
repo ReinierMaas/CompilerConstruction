@@ -1,12 +1,20 @@
 imports
 {
-import qualified CCO.Diag2Picture.Util as U
+import CCO.Diag2Picture.Util
 }
 
+data Root | Root diag :: Diag
+attr Root
+  syn picture :: Picture
+
+sem Root
+  | Root diag.pos = (0, 0)
+         lhs.picture = Picture @diag.size @diag.cmds
+
 attr Diag Diag_
-  inh   pos :: {(Int, Int)}
+  inh   pos :: {(Double, Double)}
   syn   cmds :: Commands
-      , size :: {(Int, Int)}
+      , size :: {(Double, Double)}
 
 sem Diag
   | Diag        d  .pos  = @lhs.pos
@@ -14,7 +22,8 @@ sem Diag
                    .size = @d.size
 
 sem Diag_
-  | Program     lhs.cmds =  [ Put (7.5,  0)  (Line     (1,  0)  50)
+  | Program     lhs.cmds = map (offsetCommand @lhs.pos)
+                            [ Put (7.5,  0)  (Line     (1,  0)  50)
                             , Put (7.5,  0)  (Line     (0,  1)  15)
                             , Put (7.5,  15) (Line     (-1, 2)  7.5)
                             , Put (57.5, 15) (Line     (1,  2)  7.5)
@@ -25,7 +34,8 @@ sem Diag_
                             ]
                    .size = (fst @lhs.pos + 65, snd @lhs.pos + 30)
 
-  | Platform    lhs.cmds =  [ Put (0,    15) (Line     (5,  -3) 25)
+  | Platform    lhs.cmds = map (offsetCommand @lhs.pos)
+                            [ Put (0,    15) (Line     (5,  -3) 25)
                             , Put (25,   0)  (Line     (5,  3)  25)
                             , Put (0,    15) (Line     (0,  1)  15)
                             , Put (0,    30) (Line     (1,  0)  50)
@@ -34,14 +44,16 @@ sem Diag_
                             ]
                    .size = (fst @lhs.pos + 50, snd @lhs.pos + 30)
 
-  | Interpreter lhs.cmds =  [ Put (0,    0)  (Framebox (50, 30) "")
+  | Interpreter lhs.cmds = map (offsetCommand @lhs.pos)
+                            [ Put (0,    0)  (Framebox (50, 30) "")
                             , Put (0,    20) (Makebox  (50, 10) @l)
                             , Put (0,    10) (Makebox  (50, 10) @i)
                             , Put (0,    0)  (Makebox  (50, 10) @m)
                             ]
                    .size = (fst @lhs.pos + 50, snd @lhs.pos + 30)
 
-  | Compiler    lhs.cmds =  [ Put (50,   0)  (Line     (0,  1)  20)
+  | Compiler    lhs.cmds = map (offsetCommand @lhs.pos)
+                            [ Put (50,   0)  (Line     (0,  1)  20)
                             , Put (50,   20) (Line     (-1, 0)  50)
                             , Put (0,    20) (Line     (0,  1)  10)
                             , Put (0,    30) (Line     (1,  0)  150)
@@ -50,7 +62,7 @@ sem Diag_
                             , Put (100,  20) (Line     (0,  -1) 20)
                             , Put (100,  0)  (Line     (-1, 0)  50)
                             , Put (0,    20) (Makebox  (50, 10) @l1)
-                            , Put (50,   20) (Makebox  (50, 10) {"$\\longrightarrow$"})
+                            , Put (50,   20) (Makebox  (50, 10) "$\\longrightarrow$")
                             , Put (100,  20) (Makebox  (50, 10) @l2)
                             , Put (50,   10) (Makebox  (50, 10) @c)
                             , Put (50,   0)  (Makebox  (50, 10) @m)
@@ -67,5 +79,9 @@ sem Diag_
                    .size = maxSize @d1.size @d2.size
 
 {
-  maxSize (a1,b1) (a2,b2) = (max a1 a2, max b1 b2)
+offsetCommand :: (Double, Double) -> Command -> Command
+offsetCommand (offX, offY) (Put (x, y) obj) = Put (offX + x, offY + y) obj
+
+maxSize :: (Double, Double) -> (Double, Double) -> (Double, Double)
+maxSize (a1,b1) (a2,b2) = (max a1 a2, max b1 b2)
 }

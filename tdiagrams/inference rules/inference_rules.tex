@@ -14,7 +14,9 @@
 
 % See docs on http://www.ccs.neu.edu/course/csg264/latex/mathpartir/mathpartir.pdf
 
-\section*{Basic terms}
+\section{Inference rules}
+
+\subsection*{Basic terms}
 
 \[
 \inferrule[Program]{\ }{program\ P\ in\ L : Program\ L}
@@ -32,7 +34,7 @@
 \inferrule[Compiler]{\ }{compiler\ C\ from\ I\ to\ O\ in\ M\ :\ Compiler\ I\ O\ M}
 \]
 
-\section*{Subtyping}
+\subsection*{Subtyping}
 
 \[
 \inferrule[InterpreterIsProgram]{i : Interpreter\ L\ M}{i : Program\ M}
@@ -46,7 +48,7 @@
 \inferrule[CompilerIsProgram]{c : Compiler\ I\ O\ M}{c : Program\ M}
 \]
 
-\section*{Recursive termsweweb}
+\subsection*{Recursive terms}
 
 \[
 \inferrule[ExecuteProgram]{p : Program\ L \qquad m : Platform\ L}{execute\ p\ on\ m : Execute}
@@ -63,5 +65,11 @@
 \[
 \inferrule[Compile]{p : Program\ L \qquad c : Compiler\ L\ O\ M}{compile\ p\ with\ c\ end : Compiling\ O\ M}
 \]
+
+\section{Generated pictures}
+
+Note: you can generate \texttt{diagrams.tex} by running \texttt{make e2e-test}.
+
+\input{diagrams.tex}
 
 \end{document}

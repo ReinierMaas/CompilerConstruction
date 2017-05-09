@@ -29,6 +29,9 @@ library
                      , CCO.TypeCheck
                      , CCO.TypeCheck.AG
                      , CCO.TypeCheck.Util
+                     , CCO.Diag2Picture
+                     , CCO.Diag2Picture.AG
+                     , CCO.Diag2Picture.Util
                      , CCO.Picture
                      , CCO.Picture.AG
   build-depends:     base, uu-cco >= 0.1.0.1
@@ -56,6 +59,16 @@ executable tdiag2picture
 executable tdiagrams-test
   hs-source-dirs:      test
   main-is:             Spec.hs
+  build-depends:       base
+                     , QuickCheck
+                     , uu-cco >= 0.1.0.1
+                     , silently >= 1.2.4.1
+                     , Tdiagrams
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+
+executable e2e-test
+  hs-source-dirs:      test
+  main-is:             EndToEnd.hs
   build-depends:       base
                      , QuickCheck
                      , uu-cco >= 0.1.0.1

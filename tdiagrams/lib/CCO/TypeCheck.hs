@@ -11,16 +11,13 @@ import CCO.Feedback (errorMessage, Feedback)
 import CCO.Printing (text)
 import Control.Arrow (Arrow (arr), (>>>))
 
-err :: String -> Feedback a
-err = errorMessage . text
-
 typeCheck' :: Diag -> Feedback Diag
 typeCheck' d = case sem_Diag d of
-                 T.Error e -> err e
+                 T.Error e -> errorMessage $ text e
                  _         -> return d
 
 typeCheck :: Component String String
-typeCheck = parser >>> typeCheckATerm
+typeCheck = parser >>> typeCheckATerm >>> printer
 
-typeCheckATerm :: Component ATerm String
-typeCheckATerm = component toTree >>> component typeCheck' >>> arr fromTree >>> printer
+typeCheckATerm :: Component ATerm ATerm
+typeCheckATerm = component toTree >>> component typeCheck' >>> arr fromTree

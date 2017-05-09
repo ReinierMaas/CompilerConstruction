@@ -1,4 +1,4 @@
-module {CCO.TypeCheck.AG}{}{}
+module {CCO.Diag2Picture.AG}{}{}
 
 include "../Diag/AG/Base.ag"
 include "../Picture/AG/Base.ag"
