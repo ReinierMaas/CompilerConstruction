@@ -1,0 +1,91 @@
+imports
+{
+import CCO.SourcePos        (SourcePos)
+import CCO.Tree             (ATerm (App), Tree (fromTree, toTree))
+import CCO.Tree.Parser      (parseTree, app, arg)
+import Control.Applicative  (Applicative ((<*>)), (<$>))
+}
+
+-------------------------------------------------------------------------------
+-- Syntax
+-------------------------------------------------------------------------------
+
+data DiagGen
+  | GenProgram        gp  :: {Ident}  gl  :: {Ident}
+  | GenPlatform       gm  :: {Ident}
+  | GenInterpreter    gi  :: {Ident}  gl  :: {Ident}  gm  :: {Ident}
+  | GenCompiler       gc  :: {Ident}  gl1 :: {Ident}  gl2 :: {Ident}  gm :: {Ident}
+  | GenExecute        gd1 :: DiagGen  gd2 :: DiagGen
+  | GenExecuteDouble  gd1 :: DiagGen  gd2 :: DiagGen  gd3 :: DiagGen
+  | GenCompile        gd1 :: DiagGen  gd2 :: DiagGen  gd3 :: DiagGen
+  | GenEnd
+
+deriving DiagGen : Show
+
+-------------------------------------------------------------------------------
+-- Semantics
+-------------------------------------------------------------------------------
+
+attr Diag Diag_
+  syn   diaggen :: DiagGen
+
+sem Diag
+  | Diag lhs.diaggen = @d.diaggen
+
+sem Diag_
+  | Program lhs.diaggen     = GenProgram @p @l
+  | Platform lhs.diaggen    = GenPlatform @m
+  | Interpreter lhs.diaggen = GenInterpreter @i @l @m
+  | Compiler lhs.diaggen    = GenCompiler @c @l1 @l2 @m
+  | Execute lhs.diaggen     = execute @d1.diaggen @d2.diaggen
+  | Compile lhs.diaggen     = GenCompile @d1.diaggen @d2.diaggen (compile @d1 @d2)
+
+-------------------------------------------------------------------------------
+-- Tree instances
+-------------------------------------------------------------------------------
+
+{
+instance Tree DiagGen where
+  fromTree (GenProgram p l)        = App "GenProgram"     [fromTree p,  fromTree l]
+  fromTree (GenPlatform m)         = App "GenPlatform"    [fromTree m]
+  fromTree (GenInterpreter i l m)  = App "GenInterpreter" [fromTree i,  fromTree l,  fromTree m]
+  fromTree (GenCompiler c l1 l2 m) = App "GenCompiler"    [fromTree c,  fromTree l1, fromTree l2, fromTree m]
+  fromTree (GenExecute d1 d2)      = App "GenExecute"     [fromTree d1, fromTree d2]
+  fromTree (GenCompile d1 d2 d3)   = App "GenCompile"     [fromTree d1, fromTree d2, fromTree d3]
+
+  toTree = parseTree
+             [ app "GenProgram"     (GenProgram     <$> arg <*> arg                )
+             , app "GenPlatform"    (GenPlatform    <$> arg                        )
+             , app "GenInterpreter" (GenInterpreter <$> arg <*> arg <*> arg        )
+             , app "GenCompiler"    (GenCompiler    <$> arg <*> arg <*> arg <*> arg)
+             , app "GenExecute"     (GenExecute     <$> arg <*> arg                )
+             , app "GenCompile"     (GenCompile     <$> arg <*> arg <*> arg        )
+             ]
+
+
+execute :: DiagGen -> DiagGen -> DiagGen
+execute d1@(GenProgram _ _) d2 = GenExecute d1 d2
+execute d1@(GenInterpreter _ _ _) d2 = GenExecute d1 d2
+execute d1@(GenCompiler _ _ l e) d2@(GenPlatform m) = if m == e
+                                                      then GenExecute d1 d2
+                                                      else GenExecuteDouble d1 GenEnd d2
+execute d1@(GenCompiler _ _ l e) d2@(GenInterpreter _ m _) = if m == e
+                                                      then GenExecute d1 d2
+                                                      else GenExecuteDouble d1 GenEnd d2
+execute d1@(GenExecute d11 d12) d2 = GenExecuteDouble d11 d12 d2
+execute d1@(GenExecuteDouble d11 GenEnd d13) d2 = GenExecuteDouble d11 d2 d13
+execute d1 d2 = error $ "execute failed :: " ++ show d1 ++ " : " ++ show d2 -- type correct so cannot fail
+
+compile :: DiagGen -> DiagGen -> DiagGen
+compile d1 d2 = GenProgram (name d1) (compiledTo d2)
+
+name :: DiagGen -> Ident
+name (GenProgram p _) = p
+name (GenInterpreter i _ _) = i
+name (GenCompiler c _ _ _) = c
+name _ = error "name failed" -- type correct so cannot fail
+
+compiledTo :: DiagGen -> Ident
+compiledTo (GenCompiler _ _ l2 _) = l2
+compiledTo _ = error "compiledTo failed" -- type correct so cannot fail
+}

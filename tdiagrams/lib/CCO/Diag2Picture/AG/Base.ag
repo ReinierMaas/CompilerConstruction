@@ -3,80 +3,79 @@ imports
 import CCO.Diag2Picture.Util
 }
 
-data Root | Root diag :: Diag
+data Root | Root diaggen :: DiagGen
+
 attr Root
   syn picture :: Picture
 
 sem Root
-  | Root diag.pos = (0, 0)
-         lhs.picture = Picture @diag.size @diag.cmds
+  | Root diaggen.pos = (0, 0)
+         lhs.picture = Picture @diaggen.size @diaggen.cmds
 
-attr Diag Diag_
+attr DiagGen
   inh   pos :: {(Double, Double)}
   syn   cmds :: Commands
       , size :: {(Double, Double)}
 
-sem Diag
-  | Diag        d  .pos  = @lhs.pos
-                lhs.cmds = @d.cmds
-                   .size = @d.size
+sem DiagGen
+  | GenProgram     lhs.cmds = map (offsetCommand @lhs.pos)
+                                [ Put (7.5,  0)  (Line     (1,  0)  50)
+                                , Put (7.5,  0)  (Line     (0,  1)  15)
+                                , Put (7.5,  15) (Line     (-1, 2)  7.5)
+                                , Put (57.5, 15) (Line     (1,  2)  7.5)
+                                , Put (57.5, 0)  (Line     (0,  1)  15)
+                                , Put (0,    30) (Line     (1,  0)  65)
+                                , Put (7.5,  15) (Makebox  (50, 15) @gp)
+                                , Put (7.5,  0)  (Makebox  (50, 15) @gl)
+                                ]
+                      .size = (65, 30)
 
-sem Diag_
-  | Program     lhs.cmds = map (offsetCommand @lhs.pos)
-                            [ Put (7.5,  0)  (Line     (1,  0)  50)
-                            , Put (7.5,  0)  (Line     (0,  1)  15)
-                            , Put (7.5,  15) (Line     (-1, 2)  7.5)
-                            , Put (57.5, 15) (Line     (1,  2)  7.5)
-                            , Put (57.5, 0)  (Line     (0,  1)  15)
-                            , Put (0,    30) (Line     (1,  0)  65)
-                            , Put (7.5,  15) (Makebox  (50, 15) @p)
-                            , Put (7.5,  0)  (Makebox  (50, 15) @l)
-                            ]
-                   .size = (65, 30)
+  | GenPlatform    lhs.cmds = map (offsetCommand @lhs.pos)
+                                [ Put (0,    15) (Line     (5,  -3) 25)
+                                , Put (25,   0)  (Line     (5,  3)  25)
+                                , Put (0,    15) (Line     (0,  1)  15)
+                                , Put (0,    30) (Line     (1,  0)  50)
+                                , Put (50,   30) (Line     (0,  -1) 15)
+                                , Put (7.5,  15) (Makebox  (50, 15) @gm)
+                                ]
+                      .size = (50, 30)
 
-  | Platform    lhs.cmds = map (offsetCommand @lhs.pos)
-                            [ Put (0,    15) (Line     (5,  -3) 25)
-                            , Put (25,   0)  (Line     (5,  3)  25)
-                            , Put (0,    15) (Line     (0,  1)  15)
-                            , Put (0,    30) (Line     (1,  0)  50)
-                            , Put (50,   30) (Line     (0,  -1) 15)
-                            , Put (7.5,  15) (Makebox  (50, 15) @m)
-                            ]
-                   .size = (50, 30)
+  | GenInterpreter lhs.cmds = map (offsetCommand @lhs.pos)
+                                [ Put (0,    0)  (Framebox (50, 30) "")
+                                , Put (0,    20) (Makebox  (50, 10) @gl)
+                                , Put (0,    10) (Makebox  (50, 10) @gi)
+                                , Put (0,    0)  (Makebox  (50, 10) @gm)
+                                ]
+                      .size = (50, 30)
 
-  | Interpreter lhs.cmds = map (offsetCommand @lhs.pos)
-                            [ Put (0,    0)  (Framebox (50, 30) "")
-                            , Put (0,    20) (Makebox  (50, 10) @l)
-                            , Put (0,    10) (Makebox  (50, 10) @i)
-                            , Put (0,    0)  (Makebox  (50, 10) @m)
-                            ]
-                   .size = (50, 30)
+  | GenCompiler    lhs.cmds = map (offsetCommand @lhs.pos)
+                                [ Put (50,   0)  (Line     (0,  1)  20)
+                                , Put (50,   20) (Line     (-1, 0)  50)
+                                , Put (0,    20) (Line     (0,  1)  10)
+                                , Put (0,    30) (Line     (1,  0)  150)
+                                , Put (150,  30) (Line     (0,  -1) 10)
+                                , Put (150,  20) (Line     (-1, 0)  50)
+                                , Put (100,  20) (Line     (0,  -1) 20)
+                                , Put (100,  0)  (Line     (-1, 0)  50)
+                                , Put (0,    20) (Makebox  (50, 10) @gl1)
+                                , Put (50,   20) (Makebox  (50, 10) "$\\longrightarrow$")
+                                , Put (100,  20) (Makebox  (50, 10) @gl2)
+                                , Put (50,   10) (Makebox  (50, 10) @gc)
+                                , Put (50,   0)  (Makebox  (50, 10) @gm)
+                                ]
+                      .size = (150, 30)
 
-  | Compiler    lhs.cmds = map (offsetCommand @lhs.pos)
-                            [ Put (50,   0)  (Line     (0,  1)  20)
-                            , Put (50,   20) (Line     (-1, 0)  50)
-                            , Put (0,    20) (Line     (0,  1)  10)
-                            , Put (0,    30) (Line     (1,  0)  150)
-                            , Put (150,  30) (Line     (0,  -1) 10)
-                            , Put (150,  20) (Line     (-1, 0)  50)
-                            , Put (100,  20) (Line     (0,  -1) 20)
-                            , Put (100,  0)  (Line     (-1, 0)  50)
-                            , Put (0,    20) (Makebox  (50, 10) @l1)
-                            , Put (50,   20) (Makebox  (50, 10) "$\\longrightarrow$")
-                            , Put (100,  20) (Makebox  (50, 10) @l2)
-                            , Put (50,   10) (Makebox  (50, 10) @c)
-                            , Put (50,   0)  (Makebox  (50, 10) @m)
-                            ]
-                   .size = (150, 30)
-
-  | Execute     d1 .pos = addPos @lhs.pos (0, height @d2.size)
-                d2 .pos = addPos @lhs.pos (width @d1.size / 2 - 25, 0)
-                lhs.cmds = @d1.cmds ++ @d2.cmds
-                   .size = addSize @d1.size (0, height @d2.size)
-  | Compile     d1 .pos = addPos @lhs.pos (0, height @d2.size - 10)
-                d2 .pos = addPos @lhs.pos (57.5, 0)
-                lhs.cmds = @d1.cmds ++ @d2.cmds
-                   .size = addSize @d1.size (width @d2.size + 50, height @d2.size - 10)
+  | GenExecute     gd1.pos  = addPos @lhs.pos (0, height @gd2.size)
+                   gd2.pos  = addPos @lhs.pos (width @gd1.size / 2 - 25, 0)
+                   lhs.cmds = @gd1.cmds ++ @gd2.cmds
+                      .size = addSize @gd1.size (0, height @gd2.size)
+  | GenCompile     gd1.pos  = addPos @lhs.pos (0, height @gd2.size - 10)
+                   gd2.pos  = addPos @lhs.pos (57.5, 0)
+                   gd3.pos  = addPos @lhs.pos (200, height @gd2.size - 10)
+                   lhs.cmds = @gd1.cmds ++ @gd2.cmds ++ @gd3.cmds
+                      .size = addSize @gd1.size (width @gd2.size + 50, height @gd2.size - 10)
+  | GenEnd         lhs.cmds = []
+                      .size = (0,0)
 
 {
 width = fst

@@ -11,11 +11,14 @@ import CCO.Feedback (errorMessage, Feedback)
 import CCO.Printing (text)
 import Control.Arrow (Arrow (arr), (>>>))
 
-diag2picture' :: Diag -> Feedback Picture
-diag2picture' d = return $ sem_Root (Root d)
+diag2gen :: Diag -> Feedback DiagGen
+diag2gen d = return $ sem_Diag d
+
+gen2picture :: DiagGen -> Feedback Picture
+gen2picture g = return $ sem_Root (Root g)
 
 diag2picture :: Component String String
 diag2picture = parser >>> diag2pictureATerm >>> printer
 
 diag2pictureATerm :: Component ATerm ATerm
-diag2pictureATerm = component toTree >>> component diag2picture' >>> arr fromTree
+diag2pictureATerm = component toTree >>> component diag2gen >>> component gen2picture >>> arr fromTree

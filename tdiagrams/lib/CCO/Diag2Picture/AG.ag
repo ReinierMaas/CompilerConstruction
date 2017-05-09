@@ -2,4 +2,5 @@ module {CCO.Diag2Picture.AG}{}{}
 
 include "../Diag/AG/Base.ag"
 include "../Picture/AG/Base.ag"
+include "AG/Generated.ag"
 include "AG/Base.ag"
