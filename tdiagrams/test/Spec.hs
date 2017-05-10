@@ -46,7 +46,7 @@ parsesCorrectly s = isJust <$> parseDiagAsATerm s
 typeChecks :: String -> IO Bool
 typeChecks p = do
     Just aterm <- parseDiagAsATerm p
-    isJust <$> (hSilence [stdout] $ ioRun' typeCheckATerm aterm)
+    isJust <$> (hSilence [stdout, stderr] $ ioRun' typeCheckATerm aterm)
 
 -- Test programs
 

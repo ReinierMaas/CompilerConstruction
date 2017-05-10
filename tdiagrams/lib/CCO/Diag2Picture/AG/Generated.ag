@@ -63,7 +63,7 @@ instance Tree DiagGen where
              , app "GenExecute"       (GenExecute       <$> arg <*> arg                 )
              , app "GenExecuteDouble" (GenExecuteDouble <$> arg <*> arg <*> arg         )
              , app "GenCompile"       (GenCompile       <$> arg <*> arg <*> arg         )
-             , app "GenEnd"           (GenEnd                                           )
+             , app "GenEnd"           (pure GenEnd                                      )
              ]
 
 
