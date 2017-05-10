@@ -46,20 +46,24 @@ sem Diag_
 
 {
 instance Tree DiagGen where
-  fromTree (GenProgram p l)        = App "GenProgram"     [fromTree p,  fromTree l]
-  fromTree (GenPlatform m)         = App "GenPlatform"    [fromTree m]
-  fromTree (GenInterpreter i l m)  = App "GenInterpreter" [fromTree i,  fromTree l,  fromTree m]
-  fromTree (GenCompiler c l1 l2 m) = App "GenCompiler"    [fromTree c,  fromTree l1, fromTree l2, fromTree m]
-  fromTree (GenExecute d1 d2)      = App "GenExecute"     [fromTree d1, fromTree d2]
-  fromTree (GenCompile d1 d2 d3)   = App "GenCompile"     [fromTree d1, fromTree d2, fromTree d3]
+  fromTree (GenProgram p l)             = App "GenProgram"        [fromTree p,  fromTree l]
+  fromTree (GenPlatform m)              = App "GenPlatform"       [fromTree m]
+  fromTree (GenInterpreter i l m)       = App "GenInterpreter"    [fromTree i,  fromTree l,  fromTree m]
+  fromTree (GenCompiler c l1 l2 m)      = App "GenCompiler"       [fromTree c,  fromTree l1, fromTree l2, fromTree m]
+  fromTree (GenExecute d1 d2)           = App "GenExecute"        [fromTree d1, fromTree d2]
+  fromTree (GenExecuteDouble d1 d2 d3)  = App "GenExecuteDouble"  [fromTree d1, fromTree d2, fromTree d3]
+  fromTree (GenCompile d1 d2 d3)        = App "GenCompile"        [fromTree d1, fromTree d2, fromTree d3]
+  fromTree (GenEnd)                     = App "GenEnd"            []
 
   toTree = parseTree
-             [ app "GenProgram"     (GenProgram     <$> arg <*> arg                )
-             , app "GenPlatform"    (GenPlatform    <$> arg                        )
-             , app "GenInterpreter" (GenInterpreter <$> arg <*> arg <*> arg        )
-             , app "GenCompiler"    (GenCompiler    <$> arg <*> arg <*> arg <*> arg)
-             , app "GenExecute"     (GenExecute     <$> arg <*> arg                )
-             , app "GenCompile"     (GenCompile     <$> arg <*> arg <*> arg        )
+             [ app "GenProgram"       (GenProgram       <$> arg <*> arg                 )
+             , app "GenPlatform"      (GenPlatform      <$> arg                         )
+             , app "GenInterpreter"   (GenInterpreter   <$> arg <*> arg <*> arg         )
+             , app "GenCompiler"      (GenCompiler      <$> arg <*> arg <*> arg <*> arg )
+             , app "GenExecute"       (GenExecute       <$> arg <*> arg                 )
+             , app "GenExecuteDouble" (GenExecuteDouble <$> arg <*> arg <*> arg         )
+             , app "GenCompile"       (GenCompile       <$> arg <*> arg <*> arg         )
+             , app "GenEnd"           (GenEnd                                           )
              ]
 
 
