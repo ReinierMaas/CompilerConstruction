@@ -11,7 +11,7 @@ import Control.Arrow (Arrow (arr), (>>>))
 import System.IO (hClose, hPutStrLn, openFile, Handle, IOMode(WriteMode))
 
 main = do
-    handle <- openFile "inference rules/diagrams.tex" WriteMode
+    handle <- openFile "readme/diagrams.tex" WriteMode
     sequence $ map (run handle) correctPrograms
     hClose handle
 
