@@ -17,7 +17,6 @@ picture : lib/CCO/Picture/AG.ag lib/CCO/Picture/AG/Base.ag \
 
 haskell : diag typecheck diag2picture picture
 
-
 build : haskell
 	stack build
 

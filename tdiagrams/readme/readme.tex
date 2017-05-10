@@ -7,14 +7,30 @@
   \and
   Adolfo Ochagavía \\ 4045483
 }
-\title{T-Diagram inference rules}
+\title{CCO - Assignment 1}
 \begin{document}
 
 \maketitle
 
 % See docs on http://www.ccs.neu.edu/course/csg264/latex/mathpartir/mathpartir.pdf
 
-\section{Inference rules}
+\section{Readme}
+
+\subsection*{Structure of the code}
+
+\begin{itemize}
+\item \texttt{bin}: the code of the four command line utilities required by the assignment.
+\item \texttt{lib}: the implementation of the command line utilities as a library, so that they can be unit-tested.
+\item \texttt{test}: unit and end to end tests (use \texttt{make test} and \texttt{make e2e-test} to run them).
+\item \texttt{uu-cco}: a fork of the `uu-cco` library, with a `ioRun'` function that makes it easier to unit test our components.
+\item \texttt{readme}: the latex code used to typeset this document.
+\end{itemize}
+
+\subsection*{Building}
+
+Provided you have \texttt{stack} and \texttt{uuagc} installed on your system, you can use the make commands to build the project. The project should probably build as well when using cabal, though we haven't tested it.
+
+\section{Type system}
 
 \subsection*{Basic terms}
 
