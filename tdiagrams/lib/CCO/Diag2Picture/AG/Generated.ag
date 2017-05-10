@@ -38,7 +38,7 @@ sem Diag_
   | Interpreter lhs.diaggen = GenInterpreter @i @l @m
   | Compiler lhs.diaggen    = GenCompiler @c @l1 @l2 @m
   | Execute lhs.diaggen     = execute @d1.diaggen @d2.diaggen
-  | Compile lhs.diaggen     = GenCompile @d1.diaggen @d2.diaggen (compile @d1 @d2)
+  | Compile lhs.diaggen     = GenCompile @d1.diaggen @d2.diaggen (compile @d1.diaggen @d2.diaggen)
 
 -------------------------------------------------------------------------------
 -- Tree instances

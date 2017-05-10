@@ -1,3 +1,5 @@
+import Programs
+
 import CCO.Component (Component, component, ioRun, printer)
 import CCO.Diag (parser)
 import CCO.Tree (ATerm, Tree (fromTree, toTree))
@@ -31,16 +33,3 @@ picture handle input = do
     latex <- ioRun (component toTree :: Component ATerm Picture) picture
     output <- ioRun printer latex
     hPutStrLn handle output
-
-
-correctPrograms :: [String]
-correctPrograms = [
-    "program hello in Haskell",
-    "platform x64-windows",
-    "interpreter hugs for Haskell in i686-windows",
-    "execute program hello in Haskell on interpreter hugs for Haskell in x86-windows end",
-    "execute interpreter hugs for Haskell in x86-windows on platform x86-windows end",
-    "execute program hello in Haskell on interpreter hugs for Haskell in i686-windows end",
-    "compile program hello in UUAG with compiler uuagc from UUAG to Haskell in i686-windows end",
-    "execute compile program hello in UUAG with compiler uuagc from UUAG to Haskell in i686-windows end on interpreter hugs for Haskell in i686-windows end",
-    "execute execute compile program hello in UUAG with compiler uuagc from UUAG to Haskell in i686-windows end on platform i686-windows end on interpreter hugs for Haskell in i686-windows end"]

@@ -1,6 +1,6 @@
 imports
 {
-import CCO.Diag2Picture.Util
+
 }
 
 data Root | Root diaggen :: DiagGen
@@ -36,7 +36,7 @@ sem DiagGen
                                 , Put (0,    15) (Line     (0,  1)  15)
                                 , Put (0,    30) (Line     (1,  0)  50)
                                 , Put (50,   30) (Line     (0,  -1) 15)
-                                , Put (7.5,  15) (Makebox  (50, 15) @gm)
+                                , Put (0,    15) (Makebox  (50, 15) @gm)
                                 ]
                       .size = (50, 30)
 
@@ -78,7 +78,7 @@ sem DiagGen
                    gd2.pos  = addPos @lhs.pos (57.5, 0)
                    gd3.pos  = addPos @lhs.pos (200, height @gd2.size - 10)
                    lhs.cmds = @gd1.cmds ++ @gd2.cmds ++ @gd3.cmds
-                      .size = addSize @gd1.size (width @gd2.size + 50, height @gd2.size - 10)
+                      .size = addSize @gd1.size (width @gd2.size + 50, height @gd2.size - 15)
   | GenEnd         lhs.cmds = []
                       .size = (0,0)
 

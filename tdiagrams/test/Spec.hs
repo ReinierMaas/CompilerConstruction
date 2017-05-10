@@ -1,4 +1,6 @@
 import Test.QuickCheck
+import Programs
+
 import CCO.Component (ioRun')
 import CCO.Feedback (runFeedback)
 import CCO.Tree (ATerm, Tree (fromTree))
@@ -25,7 +27,7 @@ typeIncorrectProgramsParse :: IO Bool
 typeIncorrectProgramsParse = all id <$> sequence (map parsesCorrectly typeIncorrectPrograms)
 
 wrongProgramsDontParse :: IO Bool
-wrongProgramsDontParse = all not <$> sequence (map parsesCorrectly wrongPrograms)
+wrongProgramsDontParse = all not <$> sequence (map parsesCorrectly incorrectPrograms)
 
 correctProgramsTypeCheck :: IO Bool
 correctProgramsTypeCheck = all id <$> sequence (map typeChecks correctPrograms)
@@ -47,33 +49,3 @@ typeChecks :: String -> IO Bool
 typeChecks p = do
     Just aterm <- parseDiagAsATerm p
     isJust <$> (hSilence [stdout, stderr] $ ioRun' typeCheckATerm aterm)
-
--- Test programs
-
-correctPrograms :: [String]
-correctPrograms = [
-    "program hello in Haskell",
-    "platform x86",
-    "execute program hello in Haskell on interpreter hugs for Haskell in x86-windows end",
-    "execute interpreter hugs for Haskell in x86-windows on platform x86-windows end",
-    "execute program hello in Haskell on interpreter hugs for Haskell in i686-windows end",
-    "compile program hello in UUAG with compiler uuagc from UUAG to Haskell in i686-windows end",
-    "execute compile program hello in UUAG with compiler uuagc from UUAG to Haskell in i686-windows end on interpreter hugs for Haskell in i686-windows end",
-    "execute execute compile program hello in UUAG with compiler uuagc from UUAG to Haskell in i686-windows end on platform i686-windows end on interpreter hugs for Haskell in i686-windows end" ]
-
-typeIncorrectPrograms :: [String]
-typeIncorrectPrograms = [
-    "execute platform x86 on platform ARM end", -- 1
-    "execute platform x86 on platform x86 end", -- 1
-    "execute program hello in Haskell on program world in Haskell end", -- 2
-    "execute interpreter hugs for Haskell in x86-windows on compiler hugs from Haskell to x86-windows in x86-windows end", -- 2
-    "execute compile program hello in UUAG with compiler uuagc from UUAG to Haskell in i686-windows end on interpreter x64-on-arm for x64 in arm end", -- 3
-    "compile platform x64 with compiler x64-to-x86 from x64 to x86 in x64 end", -- 4
-    "compile program hello in x64 with platform x64 end", -- 5
-    "compile program hello in Haskell with compiler uuagc from UUAG to Haskell in i686-windows end" -- 6
-    ]
-
-wrongPrograms :: [String]
-wrongPrograms = [
-    "program hello",
-    "platform" ]
