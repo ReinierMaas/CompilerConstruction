@@ -22,13 +22,13 @@
 \item \texttt{bin}: the code of the four command line utilities required by the assignment.
 \item \texttt{lib}: the implementation of the command line utilities as a library, so that they can be unit-tested.
 \item \texttt{test}: unit and end to end tests (use \texttt{make test} and \texttt{make e2e-test} to run them).
-\item \texttt{uu-cco}: a fork of the `uu-cco` library, with a `ioRun'` function that makes it easier to unit test our components.
-\item \texttt{readme}: the latex code used to typeset this document.
+\item \texttt{uu-cco}: a fork of the \texttt{uu-cco} library, with a \texttt{ioRun'} function that makes it easier to unit test our components.
+\item \texttt{readme}: the latex code used to typeset this document (use \texttt{make latex} to generate the diagrams and typeset the document).
 \end{itemize}
 
 \subsection*{Building}
 
-Provided you have \texttt{stack} and \texttt{uuagc} installed on your system, you can use the make commands to build the project. The project should probably build as well when using cabal, though we haven't tested it.
+Provided you have \texttt{stack} and \texttt{uuagc} installed on your system, you can use the make commands to build the project (concretely, \texttt{make build}). The project should probably build as well when using cabal, though we haven't tested it.
 
 \section{Type system}
 
@@ -86,6 +86,8 @@ Provided you have \texttt{stack} and \texttt{uuagc} installed on your system, yo
 
 Note: you can generate \texttt{diagrams.tex} by running \texttt{make e2e-test}.
 
+\begin{scriptsize}
 \input{diagrams.tex}
+\end{scriptsize}
 
 \end{document}
