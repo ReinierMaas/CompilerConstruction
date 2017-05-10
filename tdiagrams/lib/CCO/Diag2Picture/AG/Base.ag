@@ -69,6 +69,11 @@ sem DiagGen
                    gd2.pos  = addPos @lhs.pos (width @gd1.size / 2 - 25, 0)
                    lhs.cmds = @gd1.cmds ++ @gd2.cmds
                       .size = addSize @gd1.size (0, height @gd2.size)
+  | GenExecuteDouble  gd1.pos  = addPos @lhs.pos (0, 10 + height @gd2.size)
+                      gd2.pos  = addPos @lhs.pos (width @gd1.size / 2 - 25, 10)
+                      gd3.pos  = addPos @lhs.pos (width @gd1.size - 57.5, height @gd2.size)
+                      lhs.cmds = @gd1.cmds ++ @gd2.cmds ++ @gd3.cmds
+                         .size = addSize @gd1.size (0, 10 + max (height @gd2.size) (height @gd3.size))
   | GenCompile     gd1.pos  = addPos @lhs.pos (0, height @gd2.size - 10)
                    gd2.pos  = addPos @lhs.pos (57.5, 0)
                    gd3.pos  = addPos @lhs.pos (200, height @gd2.size - 10)

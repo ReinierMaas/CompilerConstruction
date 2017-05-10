@@ -70,12 +70,12 @@ instance Tree DiagGen where
 execute :: DiagGen -> DiagGen -> DiagGen
 execute d1@(GenProgram _ _) d2 = GenExecute d1 d2
 execute d1@(GenInterpreter _ _ _) d2 = GenExecute d1 d2
-execute d1@(GenCompiler _ _ l e) d2@(GenPlatform m) = if m == e
-                                                      then GenExecute d1 d2
-                                                      else GenExecuteDouble d1 GenEnd d2
-execute d1@(GenCompiler _ _ l e) d2@(GenInterpreter _ m _) = if m == e
-                                                      then GenExecute d1 d2
-                                                      else GenExecuteDouble d1 GenEnd d2
+execute d1@(GenCompile _ (GenCompiler _ _ l e) _) d2@(GenPlatform m) =  if m == e
+                                                                        then GenExecute d1 d2
+                                                                        else GenExecuteDouble d1 GenEnd d2
+execute d1@(GenCompile _ (GenCompiler _ _ l e) _) d2@(GenInterpreter _ m _) = if m == e
+                                                                              then GenExecute d1 d2
+                                                                              else GenExecuteDouble d1 GenEnd d2
 execute d1@(GenExecute d11 d12) d2 = GenExecuteDouble d11 d12 d2
 execute d1@(GenExecuteDouble d11 GenEnd d13) d2 = GenExecuteDouble d11 d2 d13
 execute d1 d2 = error $ "execute failed :: " ++ show d1 ++ " : " ++ show d2 -- type correct so cannot fail
