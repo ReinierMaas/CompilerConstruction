@@ -26,4 +26,7 @@ test : haskell
 e2e-test : haskell
 	stack build --exec e2e-test
 
+latex : e2e-test
+	$(MAKE) -C readme
+
 .PHONY : build
