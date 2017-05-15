@@ -7,7 +7,6 @@ import Data.Graph.Inductive.Graph
 import Data.Graph.Inductive.PatriciaTree
 import Data.Text.Lazy (unpack)
 
-import CFG
 import Lexer
 import Parser
 
