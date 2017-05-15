@@ -26,5 +26,8 @@ executable mf
                        AttributeGrammar
   build-depends:       base,
                        containers,
-                       array
+                       text,
+                       array,
+                       fgl == 5.5.3.1,
+                       graphviz
   hs-source-dirs:      src
