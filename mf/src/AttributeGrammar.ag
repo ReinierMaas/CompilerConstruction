@@ -7,11 +7,11 @@ import qualified Data.List as L
 data Program
   | Program   procs :: Procs
               stat  :: Stat
-  deriving Program : Show
+  deriving Program  : Show
 
 data Program'
   | Program'  procs :: Procs'
-              stat :: Stat'
+              stat  :: Stat'
   deriving Program' : Show
 
 data Proc
@@ -24,9 +24,9 @@ deriving Proc' : Show
 
 data Stat
   | Skip
-  | IfThenElse    cond  :: {BExpr}      stat1  :: Stat      stat2 :: Stat
+  | IfThenElse    cond  :: {BExpr}      stat1  :: Stat     stat2  :: Stat
   | While         cond  :: {BExpr}      stat   :: Stat
-  | Call          name  :: String     params :: {Exprs}    out :: String
+  | Call          name  :: String     params :: {Exprs}    out    :: String
   | IAssign       name  :: String     val    :: {IExpr}
   | BAssign       name  :: String     val    :: {BExpr}
   | Seq           stat1 :: Stat       stat2  :: Stat
@@ -39,20 +39,20 @@ deriving Stat : Show
 
 data Stat'
   | Skip'          label :: Int
-  | IfThenElse'    labelc :: Int       cond  :: BExpr      stat1  :: Stat'     stat2 :: Stat'
+  | IfThenElse'    labelc :: Int       cond  :: BExpr      stat1  :: Stat'  stat2 :: Stat'
   | While'         labelc :: Int       cond  :: BExpr      stat   :: Stat'
-  | Call'          labelCall :: Int  labelExit :: Int      name  :: String     params :: Exprs    out :: String
+  | Call'          labelCall :: Int    labelExit :: Int    name   :: String params :: Exprs out :: String
   | IAssign'       label :: Int        name  :: String     val    :: IExpr
   | BAssign'       label :: Int        name  :: String     val    :: BExpr
   | Seq'           stat1 :: Stat'      stat2  :: Stat'
   | Malloc'        label :: Int        name  :: String     size   :: IExpr
   | Free'          label :: Int        ptr   :: IExpr
-  | RefAssign'     label :: Int        ptr   :: IExpr      val :: IExpr
+  | RefAssign'     label :: Int        ptr   :: IExpr      val    :: IExpr
   | Continue'      label :: Int
   | Break'         label :: Int
 deriving Stat' : Show
 
-data IExpr 
+data IExpr
   | IConst        val  :: Int
   | Var           name :: String
   | Plus          left :: IExpr       right :: IExpr

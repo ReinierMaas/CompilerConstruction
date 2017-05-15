@@ -4,7 +4,7 @@ diag : lib/CCO/Diag/AG.ag lib/CCO/Diag/AG/Base.ag
 	uuagc -Hdcfws -P lib/CCO/Diag lib/CCO/Diag/AG.ag
 
 typecheck : lib/CCO/TypeCheck/AG.ag lib/CCO/TypeCheck/AG/Base.ag \
- 		diag
+		diag
 	uuagc -Hdcfws -P lib/CCO/TypeCheck lib/CCO/TypeCheck/AG.ag
 
 diag2picture : lib/CCO/Diag2Picture/AG.ag lib/CCO/Diag2Picture/AG/Base.ag \
