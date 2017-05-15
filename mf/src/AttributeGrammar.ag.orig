@@ -10,8 +10,13 @@ data Program
   deriving Program  : Show
 
 data Program'
-  | Program'  procs :: [Proc']
+<<<<<<< 7fcc32b44c3e241b50c01ca1966886f1266092e0
+  | Program'  procs :: Procs'
               stat  :: Stat'
+=======
+  | Program'  procs :: [Proc']
+              stat :: Stat'
+>>>>>>> Cleanup AG
   deriving Program' : Show
 
 data Proc
@@ -26,7 +31,11 @@ data Stat
   | Skip
   | IfThenElse    cond  :: {BExpr}      stat1  :: Stat     stat2  :: Stat
   | While         cond  :: {BExpr}      stat   :: Stat
+<<<<<<< 7fcc32b44c3e241b50c01ca1966886f1266092e0
+  | Call          name  :: String     params :: {Exprs}    out    :: String
+=======
   | Call          name  :: String     params :: {[Expr]}    out :: String
+>>>>>>> Cleanup AG
   | IAssign       name  :: String     val    :: {IExpr}
   | BAssign       name  :: String     val    :: {BExpr}
   | Seq           stat1 :: Stat       stat2  :: Stat
@@ -41,7 +50,11 @@ data Stat'
   | Skip'          label :: Int
   | IfThenElse'    labelc :: Int       cond  :: BExpr      stat1  :: Stat'  stat2 :: Stat'
   | While'         labelc :: Int       cond  :: BExpr      stat   :: Stat'
-  | Call'          labelCall :: Int  labelExit :: Int      name   :: String params :: [Expr]    out :: String
+<<<<<<< 7fcc32b44c3e241b50c01ca1966886f1266092e0
+  | Call'          labelCall :: Int    labelExit :: Int    name   :: String params :: Exprs out :: String
+=======
+  | Call'          labelCall :: Int  labelExit :: Int      name  :: String     params :: [Expr]    out :: String
+>>>>>>> Cleanup AG
   | IAssign'       label :: Int        name  :: String     val    :: IExpr
   | BAssign'       label :: Int        name  :: String     val    :: BExpr
   | Seq'           stat1 :: Stat'      stat2  :: Stat'
