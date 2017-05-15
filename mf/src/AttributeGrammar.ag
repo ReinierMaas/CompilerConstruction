@@ -5,51 +5,59 @@ import qualified Data.List as L
 }
 
 data Program
-  | Program   procs :: [Proc]
-              stat  :: Stat
-  deriving Program  : Show
+  | Program       procs :: Procs stat :: Stat
+deriving Program : Show
 
 data Program'
-  | Program'  procs :: [Proc']
-              stat  :: Stat'
-  deriving Program' : Show
+  | Program'      procs :: Procs' stat :: Stat'
+deriving Program' : Show
+
+data Procs
+  | Cons          proc :: Proc procs :: Procs
+  | Nil
+deriving Procs : Show
+
+data Procs'
+  | Cons'         proc :: Proc' procs :: Procs'
+  | Nil'
+deriving Procs' : Show
 
 data Proc
-  | Proc          name :: String  inp :: {[String]}  out :: String   stat :: Stat
+  | Proc          name :: String inp :: {[String]} out :: String stat :: Stat
 deriving Proc : Show
 
 data Proc'
-  | Proc'         labelEntry :: Int  labelReturn :: Int    name :: String  inp :: {[String]}  out :: String   stat :: Stat'
+  | Proc'         labelEntry :: Int labelReturn :: Int name :: String inp :: {[String]} out :: String stat :: Stat'
 deriving Proc' : Show
 
 data Stat
   | Skip
-  | IfThenElse    cond  :: {BExpr}      stat1  :: Stat     stat2  :: Stat
-  | While         cond  :: {BExpr}      stat   :: Stat
-  | Call          name  :: String     params :: {[Expr]}    out :: String
-  | IAssign       name  :: String     val    :: {IExpr}
-  | BAssign       name  :: String     val    :: {BExpr}
-  | Seq           stat1 :: Stat       stat2  :: Stat
-  | Malloc        name  :: String     size   :: {IExpr}
-  | Free          ptr   :: {IExpr}
-  | RefAssign     ptr   :: {IExpr}    val    :: {IExpr}
+  | IfThenElse                                            cond    :: {BExpr}  stat1   :: Stat       stat2 :: Stat
+  | While                                                 cond    :: {BExpr}  stat    :: Stat
+  | Call                                                  name    :: String   params  :: {[Expr]}   out   :: String
+  | IAssign                                               name    :: String   val     :: {IExpr}
+  | BAssign                                               name    :: String   val     :: {BExpr}
+  | Seq                                                   stat1   :: Stat     stat2   :: Stat
+  | Malloc                                                name    :: String   size    :: {IExpr}
+  | Free                                                  ptr     :: {IExpr}
+  | RefAssign                                             ptr     :: {IExpr}  val     :: {IExpr}
   | Continue
   | Break
 deriving Stat : Show
 
 data Stat'
-  | Skip'          label :: Int
-  | IfThenElse'    labelc :: Int       cond  :: BExpr      stat1  :: Stat'  stat2 :: Stat'
-  | While'         labelc :: Int       cond  :: BExpr      stat   :: Stat'
-  | Call'          labelCall :: Int  labelExit :: Int      name   :: String params :: [Expr]    out :: String
-  | IAssign'       label :: Int        name  :: String     val    :: IExpr
-  | BAssign'       label :: Int        name  :: String     val    :: BExpr
-  | Seq'           stat1 :: Stat'      stat2  :: Stat'
-  | Malloc'        label :: Int        name  :: String     size   :: IExpr
-  | Free'          label :: Int        ptr   :: IExpr
-  | RefAssign'     label :: Int        ptr   :: IExpr      val    :: IExpr
-  | Continue'      label :: Int
-  | Break'         label :: Int
+  | Skip'         label       :: Int
+  | IfThenElse'   label       :: Int                      cond    :: BExpr    stat1   :: Stat'      stat2 :: Stat'
+  | While'        label       :: Int                      cond    :: BExpr    stat    :: Stat'
+  | Call'         labelCall   :: Int  labelExit   :: Int  name    :: String   params  :: {[Expr]}   out   :: String
+  | IAssign'      label       :: Int                      name    :: String   val     :: IExpr
+  | BAssign'      label       :: Int                      name    :: String   val     :: BExpr
+  | Seq'                                                  stat1   :: Stat'    stat2   :: Stat'
+  | Malloc'       label       :: Int                      name    :: String   size    :: IExpr
+  | Free'         label       :: Int                      ptr     :: IExpr
+  | RefAssign'    label       :: Int                      ptr     :: IExpr    val     :: IExpr
+  | Continue'     label       :: Int
+  | Break'        label       :: Int
 deriving Stat' : Show
 
 data IExpr
@@ -77,12 +85,88 @@ data BExpr
 deriving BExpr : Eq, Show
 
 
-data Expr | B BExpr
-          | I IExpr
+data Expr
+  | B             BExpr
+  | I             IExpr
 deriving Expr : Eq, Show
 
-data Code | CBExpr   BExpr
-          | CIExpr   IExpr
-          | CStat    Stat'
-          | CProc    Proc'
-          | CProgram Program'
+data Code
+  | CBExpr        BExpr
+  | CIExpr        IExpr
+  | CStat         Stat'
+  | CProc         Proc'
+  | CProgram      Program'
+deriving Code : Show
+
+
+---------------
+-- SEMANTICS --
+---------------
+
+attr Program
+  chn label       :: Int
+  syn program     :: Program'
+
+attr Procs
+  chn label       :: Int
+  syn procs       :: Procs'
+
+attr Proc
+  chn label       :: Int
+  syn proc        :: Proc'
+
+attr Stat
+  chn label       :: Int
+  syn stat        :: Stat'
+
+sem Program
+  | Program       lhs.program = Program' @procs.procs @stat.stat
+
+sem Procs
+  | Cons          lhs.procs   = Cons' @proc.proc @procs.procs
+  | Nil           lhs.procs   = Nil'
+
+sem Proc
+  | Proc          lhs.proc    = Proc' @lhs.label (plusOne @lhs.label) @name @inp @out @stat.stat
+                  stat.label  = @lhs.label + 2
+                  lhs.label   = @stat.label
+
+sem Stat
+  | Skip          lhs.stat    = Skip' @lhs.label
+                  lhs.label   = @lhs.label + 1
+  | IfThenElse    lhs.stat    = IfThenElse' @lhs.label @cond @stat1.stat @stat2.stat
+                  stat1.label = @lhs.label + 1
+                  stat2.label = @stat1.label
+                  lhs.label   = @stat2.label
+  | While         lhs.stat    = While' @lhs.label @cond @stat.stat
+                  stat.label  = @lhs.label + 1
+                  lhs.label   = @stat.label
+  | Call          lhs.stat    = Call' @lhs.label (plusOne @lhs.label) @name @params @out
+                  lhs.label   = @lhs.label + 2
+  | IAssign       lhs.stat    = IAssign' @lhs.label @name @val
+                  lhs.label   = @lhs.label + 1
+  | BAssign       lhs.stat    = BAssign' @lhs.label @name @val
+                  lhs.label   = @lhs.label + 1
+  | Seq           lhs.stat    = Seq' @stat1.stat @stat2.stat
+                  stat1.label = @lhs.label
+                  stat2.label = @stat1.label
+                  lhs.label   = @stat2.label
+  | Malloc        lhs.stat    = Malloc' @lhs.label @name @size
+                  lhs.label   = @lhs.label + 1
+  | Free          lhs.stat    = Free' @lhs.label @ptr
+                  lhs.label   = @lhs.label + 1
+  | RefAssign     lhs.stat    = RefAssign' @lhs.label @ptr @val
+                  lhs.label   = @lhs.label + 1
+  | Continue      lhs.stat    = Continue' @lhs.label
+                  lhs.label   = @lhs.label + 1
+  | Break         lhs.stat    = Break' @lhs.label
+                  lhs.label   = @lhs.label + 1
+
+{
+plusOne :: Int -> Int
+plusOne = (+1)
+
+procAppend :: Procs -> Procs -> Procs
+procAppend Nil ys = ys
+procAppend (Cons x xs) ys = Cons x (procAppend xs ys)
+}

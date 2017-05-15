@@ -8,8 +8,8 @@ import AttributeGrammar
 %tokentype { Token }
 %error { parseError }
 
-%token 
-      
+%token
+
       ident            { TIdent $$ }
       int              { TInt $$ }
       bool             { TBool $$ }
@@ -67,8 +67,8 @@ Start : Program { $1 }
 
 Program : begin Procs Stats end  { Program $2 $3 }
 
-Procs : Procs Proc   { $1 ++ [ $2 ] }
-      | {- empty -}  { [ ] }
+Procs : Procs Proc   { procAppend $1 (Cons $2 Nil) }
+      | {- empty -}  { Nil }
 Proc  : proc ident "(" ValArgs ResArg ")" is Stats end  { Proc $2 $4 $5 $8 }
 
 ValArgs : val Args ","  { $2 }

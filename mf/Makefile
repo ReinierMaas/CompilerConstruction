@@ -7,10 +7,10 @@ dev: all
 
 #----------------------------
 
-src/Lexer.hs:
+src/Lexer.hs: src/Lexer.x
 	cd src && alex Lexer.x
 
-src/Parser.hs:
+src/Parser.hs: src/Parser.y src/AttributeGrammar.hs src/Lexer.hs
 	cd src && happy Parser.y
 
 # uuagc:
@@ -20,7 +20,7 @@ src/Parser.hs:
 #  -f              --semfuns                       generate semantic functions
 #  -w              --wrappers                      generate wappers for semantic domains
 #  -s              --signatures                    generate signatures for semantic functions
-src/AttributeGrammar.hs:
+src/AttributeGrammar.hs: src/AttributeGrammar.ag
 	cd src && uuagc -Hdcfws AttributeGrammar.ag --module AttributeGrammar
 
 #----------------------------

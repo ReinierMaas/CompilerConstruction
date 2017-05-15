@@ -28,9 +28,17 @@ run = runAnalysis'
 runAnalysis' :: (Eq a, Show a) => (Program' -> Analysis a) -> String -> IO ()
 runAnalysis' analyze programName = do
   p <- parse programName
-  putStrLn "OUTPUT:"
+  let t = snd $ (sem_Program p) 0
+
+  putStrLn "PARSED INPUT:"
   putStrLn (show p)
-  putStrLn "G'bye"
+  putStrLn ""
+  putStrLn "TRANSFORMED INPUT:"
+  putStrLn (show t)
+  putStrLn ""
+  putStrLn "ANALYSIS:"
+  putStrLn ""
+  putStrLn "THE END"
 
 -- parse program
 
