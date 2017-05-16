@@ -36,30 +36,30 @@ deriving Proc' : Show
 
 data Stat
   | Skip
-  | IfThenElse                                            cond    :: BExpr    stat1   :: Stat       stat2 :: Stat
-  | While                                                 cond    :: BExpr    stat    :: Stat
+  | IfThenElse                                            cond    :: {BExpr}  stat1   :: Stat       stat2 :: Stat
+  | While                                                 cond    :: {BExpr}  stat    :: Stat
   | Call                                                  name    :: String   params  :: {[Expr]}   out   :: String
-  | IAssign                                               name    :: String   val     :: IExpr
-  | BAssign                                               name    :: String   val     :: BExpr
+  | IAssign                                               name    :: String   val     :: {IExpr}
+  | BAssign                                               name    :: String   val     :: {BExpr}
   | Seq                                                   stat1   :: Stat     stat2   :: Stat
-  | Malloc                                                name    :: String   size    :: IExpr
-  | Free                                                  ptr     :: IExpr
-  | RefAssign                                             ptr     :: IExpr    val     :: IExpr
+  | Malloc                                                name    :: String   size    :: {IExpr}
+  | Free                                                  ptr     :: {IExpr}
+  | RefAssign                                             ptr     :: {IExpr}  val     :: {IExpr}
   | Continue
   | Break
 deriving Stat : Show
 
 data Stat'
   | Skip'         label       :: Int
-  | IfThenElse'   label       :: Int                      cond    :: BExpr    stat1   :: Stat'      stat2 :: Stat'
-  | While'        label       :: Int                      cond    :: BExpr    stat    :: Stat'
+  | IfThenElse'   label       :: Int                      cond    :: {BExpr}  stat1   :: Stat'      stat2 :: Stat'
+  | While'        label       :: Int                      cond    :: {BExpr}  stat    :: Stat'
   | Call'         labelCall   :: Int  labelExit   :: Int  name    :: String   params  :: {[Expr]}   out   :: String
-  | IAssign'      label       :: Int                      name    :: String   val     :: IExpr
-  | BAssign'      label       :: Int                      name    :: String   val     :: BExpr
+  | IAssign'      label       :: Int                      name    :: String   val     :: {IExpr}
+  | BAssign'      label       :: Int                      name    :: String   val     :: {BExpr}
   | Seq'                                                  stat1   :: Stat'    stat2   :: Stat'
-  | Malloc'       label       :: Int                      name    :: String   size    :: IExpr
-  | Free'         label       :: Int                      ptr     :: IExpr
-  | RefAssign'    label       :: Int                      ptr     :: IExpr    val     :: IExpr
+  | Malloc'       label       :: Int                      name    :: String   size    :: {IExpr}
+  | Free'         label       :: Int                      ptr     :: {IExpr}
+  | RefAssign'    label       :: Int                      ptr     :: {IExpr}  val     :: {IExpr}
   | Continue'     label       :: Int
   | Break'        label       :: Int
 deriving Stat' : Show
@@ -225,7 +225,7 @@ sem Stat'
                    lhs.exitLabels = [@label]
   | IfThenElse'    stat1.procLabels = @lhs.procLabels
                    stat2.procLabels = @lhs.procLabels
-                   lhs.nodes = [(@label, ppBExpr cond)] ++ @stat1.nodes ++ @stat2.nodes
+                   lhs.nodes = [(@label, ppBExpr @cond)] ++ @stat1.nodes ++ @stat2.nodes
                    lhs.edges = [(@label, @stat1.entryLabel, "true"), (@label, @stat2.entryLabel, "false")] ++ @stat1.edges ++ @stat2.edges
                    lhs.entryLabel = @label
                    lhs.exitLabels = @stat1.exitLabels ++ @stat2.exitLabels

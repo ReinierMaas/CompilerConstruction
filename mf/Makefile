@@ -5,6 +5,9 @@ all: src/Lexer.hs src/Parser.hs src/AttributeGrammar.hs
 dev: all
 	cd src && stack ghci
 
+ag:
+	cd src && uuagc -Hdcfws AttributeGrammar.ag --module AttributeGrammar
+
 #----------------------------
 
 src/Lexer.hs: src/Lexer.x
