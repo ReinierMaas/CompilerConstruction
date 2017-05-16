@@ -9,7 +9,6 @@ import qualified Data.Graph.Inductive.Graph as Graph
 import Data.Graph.Inductive.PatriciaTree
 import Data.Text.Lazy (unpack)
 import qualified Data.Map as M
-import qualified Data.Set as Set
 import qualified Data.List as L
 
 import AttributeGrammar
@@ -69,9 +68,8 @@ runAnalysis' analyze programName = do
 -- Removes unreachable nodes from the graph.
 -- We select all nodes that are reachable from the entry point and discard anything else.
 reachable :: Int -> Gr String String -> Gr String String
-reachable entryPoint g = let reachableNodes = Set.fromList $ bfs entryPoint g
-                         in  nfilter (`Set.member` reachableNodes) g
-
+reachable entryPoint g = let reachableNodes = bfs entryPoint g
+                         in  subgraph reachableNodes g
 
 -- parse program
 
