@@ -4,10 +4,12 @@ import Data.GraphViz (graphToDot, fmtNode, fmtEdge, nonClusteredParams)
 import Data.GraphViz.Attributes (toLabel)
 import Data.GraphViz.Printing (toDot, renderDot)
 import Data.Graph.Inductive.Graph
+import Data.Graph.Inductive.Query.BFS (bfs)
 import qualified Data.Graph.Inductive.Graph as Graph
 import Data.Graph.Inductive.PatriciaTree
 import Data.Text.Lazy (unpack)
 import qualified Data.Map as M
+import qualified Data.Set as Set
 import qualified Data.List as L
 
 import AttributeGrammar
@@ -36,9 +38,10 @@ runAnalysis' :: (Eq a, Show a) => (Program' -> Analysis a) -> String -> IO ()
 runAnalysis' analyze programName = do
   p <- parse programName
   let t = snd $ (sem_Program p) 0
-  let (edges, _, _, nodes, _) = sem_Program' t
-  let cfg = insEdges edges $ insNodes nodes Graph.empty :: Gr String String
+  let (edges, entryPoint, _, nodes, _) = sem_Program' t
+  let cfg = mkGraph nodes edges :: Gr String String
 
+  putStrLn $ "Entry point: " ++ show entryPoint
   putStrLn "PARSED INPUT:"
   putStrLn (show p)
   putStrLn ""
@@ -48,8 +51,9 @@ runAnalysis' analyze programName = do
   putStrLn "CFG:"
   putStrLn $ renderGraph cfg
   putStrLn ""
+  putStrLn $ "Possible entry points: " ++ show (filter (\n -> pre cfg n == []) (Graph.nodes cfg))
   putStrLn "Reachable CFG:"
-  putStrLn $ renderGraph $ reachable cfg
+  putStrLn $ renderGraph $ reachable entryPoint cfg
   putStrLn ""
   putStrLn "ANALYSIS:"
   putStrLn ""
@@ -61,7 +65,12 @@ runAnalysis' analyze programName = do
     params = nonClusteredParams { fmtNode = fn, fmtEdge = fe }
     fn (_, l) = [toLabel l]
     fe (_, _, l) = [toLabel l]
-    reachable = id -- FIXME: implement something to remove all unreachable nodes
+
+-- Removes unreachable nodes from the graph.
+-- We select all nodes that are reachable from the entry point and discard anything else.
+reachable :: Int -> Gr String String -> Gr String String
+reachable entryPoint g = let reachableNodes = Set.fromList $ bfs entryPoint g
+                         in  nfilter (`Set.member` reachableNodes) g
 
 
 -- parse program
