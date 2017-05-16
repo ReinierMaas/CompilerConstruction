@@ -1,7 +1,11 @@
 {
-import qualified Data.Map as M
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.List as L
+import qualified Data.Graph.Inductive as Graph
+import Data.Graph.Inductive
+import Data.Graph.Inductive.PatriciaTree
 }
 
 data Program
@@ -32,15 +36,15 @@ deriving Proc' : Show
 
 data Stat
   | Skip
-  | IfThenElse                                            cond    :: {BExpr}  stat1   :: Stat       stat2 :: Stat
-  | While                                                 cond    :: {BExpr}  stat    :: Stat
+  | IfThenElse                                            cond    :: BExpr    stat1   :: Stat       stat2 :: Stat
+  | While                                                 cond    :: BExpr    stat    :: Stat
   | Call                                                  name    :: String   params  :: {[Expr]}   out   :: String
-  | IAssign                                               name    :: String   val     :: {IExpr}
-  | BAssign                                               name    :: String   val     :: {BExpr}
+  | IAssign                                               name    :: String   val     :: IExpr
+  | BAssign                                               name    :: String   val     :: BExpr
   | Seq                                                   stat1   :: Stat     stat2   :: Stat
-  | Malloc                                                name    :: String   size    :: {IExpr}
-  | Free                                                  ptr     :: {IExpr}
-  | RefAssign                                             ptr     :: {IExpr}  val     :: {IExpr}
+  | Malloc                                                name    :: String   size    :: IExpr
+  | Free                                                  ptr     :: IExpr
+  | RefAssign                                             ptr     :: IExpr    val     :: IExpr
   | Continue
   | Break
 deriving Stat : Show
@@ -68,7 +72,7 @@ data IExpr
   | Times         left :: IExpr       right :: IExpr
   | Divide        left :: IExpr       right :: IExpr
   | Deref         ptr  :: IExpr
-deriving IExpr : Eq, Show
+deriving IExpr : Eq
 
 data BExpr
   | BConst        val  :: Bool
@@ -82,7 +86,7 @@ data BExpr
   | And           left :: BExpr       right :: BExpr
   | Or            left :: BExpr       right :: BExpr
   | Not           val  :: BExpr
-deriving BExpr : Eq, Show
+deriving BExpr : Eq
 
 
 data Expr
@@ -98,10 +102,9 @@ data Code
   | CProgram      Program'
 deriving Code : Show
 
-
----------------
--- SEMANTICS --
----------------
+----------------------------------------
+-- Program to Program' transformation --
+----------------------------------------
 
 attr Program
   chn label       :: Int
@@ -162,6 +165,114 @@ sem Stat
   | Break         lhs.stat    = Break' @lhs.label
                   lhs.label   = @lhs.label + 1
 
+--------------------
+-- CFG generation --
+--------------------
+
+attr Program'
+  syn procLabels :: {Map String (Int, Int)}
+  syn nodes :: {[LNode String]}
+  syn edges :: {[LEdge String]}
+  syn entryLabel :: Int
+  syn exitLabels :: {[Int]}
+
+attr Procs'
+  chn procLabels :: {Map String (Int, Int)}
+  syn nodes :: {[LNode String]}
+  syn edges :: {[LEdge String]}
+
+attr Proc'
+  inh procLabels :: {Map String (Int, Int)}
+  syn procLabel :: {Map String (Int, Int)}
+  syn nodes :: {[LNode String]}
+  syn edges :: {[LEdge String]}
+
+attr Stat'
+  inh procLabels :: {Map String (Int, Int)}
+  syn nodes :: {[LNode String]}
+  syn edges :: {[LEdge String]}
+  syn entryLabel :: Int
+  syn exitLabels :: {[Int]}
+
+sem Program'
+  | Program'       procs.procLabels = Map.empty
+                   lhs.procLabels = @procs.procLabels
+                   lhs.nodes = @procs.nodes ++ @stat.nodes
+                   lhs.edges = @procs.edges ++ @stat.edges
+                   lhs.entryLabel = @stat.entryLabel
+                   lhs.exitLabels = @stat.exitLabels
+
+sem Procs'
+  | Cons'          procs.procLabels = Map.union @lhs.procLabels @proc.procLabel
+                   lhs.procLabels = @procs.procLabels
+                   proc.procLabels = @lhs.procLabels
+                   lhs.nodes = @procs.nodes ++ @proc.nodes
+                   lhs.edges = @procs.edges ++ @proc.edges
+  | Nil'           lhs.nodes = []
+                   lhs.edges = []
+
+sem Proc'
+  | Proc'          lhs.procLabel = Map.singleton @name (@labelEntry, @labelReturn)
+                   lhs.nodes = [(@labelEntry, "Entry to proc " ++ @name), (@labelReturn, "Return from proc " ++ @name)] ++ @stat.nodes
+                   lhs.edges = (@labelEntry, @stat.entryLabel, "") : (map (\el -> (el, @labelReturn, "")) @stat.exitLabels) ++ @stat.edges
+                   stat.procLabels = @lhs.procLabels
+
+sem Stat'
+  | Skip'          lhs.nodes = [(@label, "skip")]
+                   lhs.edges = []
+                   lhs.entryLabel = @label
+                   lhs.exitLabels = [@label]
+  | IfThenElse'    stat1.procLabels = @lhs.procLabels
+                   stat2.procLabels = @lhs.procLabels
+                   lhs.nodes = [(@label, ppBExpr cond)] ++ @stat1.nodes ++ @stat2.nodes
+                   lhs.edges = [(@label, @stat1.entryLabel, "true"), (@label, @stat2.entryLabel, "false")] ++ @stat1.edges ++ @stat2.edges
+                   lhs.entryLabel = @label
+                   lhs.exitLabels = @stat1.exitLabels ++ @stat2.exitLabels
+  | While'         stat.procLabels = @lhs.procLabels
+                   lhs.nodes = [(@label, ppBExpr @cond)] ++ @stat.nodes
+                   lhs.edges = [(@label, @stat.entryLabel, "true")] ++ (map (\ep -> (ep, @label, "")) @stat.exitLabels) ++ @stat.edges
+                   lhs.entryLabel = @label
+                   lhs.exitLabels = [@label]
+  | Call'          loc.label = @labelCall
+                   lhs.nodes = [(@label, "call proc " ++ @name)]
+                   lhs.edges = let (i, o) = @lhs.procLabels Map.! @name in [(@label, i, ""), (o, @label, "")]
+                   lhs.entryLabel = @label
+                   lhs.exitLabels = [@label]
+  | IAssign'       lhs.nodes = [(@label, @name ++ " = " ++ ppIExpr @val)]
+                   lhs.edges = []
+                   lhs.entryLabel = @label
+                   lhs.exitLabels = [@label]
+  | BAssign'       lhs.nodes = [(@label, @name ++ " = " ++ ppBExpr @val)]
+                   lhs.edges = []
+                   lhs.entryLabel = @label
+                   lhs.exitLabels = [@label]
+  | Seq'           stat1.procLabels = @lhs.procLabels
+                   stat2.procLabels = @lhs.procLabels
+                   lhs.nodes = @stat1.nodes ++ @stat2.nodes
+                   lhs.edges = [(head @stat1.exitLabels, @stat2.entryLabel, "")] ++ @stat1.edges ++ @stat2.edges
+                   lhs.entryLabel = @stat1.entryLabel
+                   lhs.exitLabels = @stat2.exitLabels
+  | Malloc'        lhs.nodes = [(@label, "malloc " ++ @name ++ " with size " ++ ppIExpr @size)]
+                   lhs.edges = []
+                   lhs.entryLabel = @label
+                   lhs.exitLabels = [@label]
+  | Free'          lhs.nodes = [(@label, "free " ++ ppIExpr @ptr)]
+                   lhs.edges = []
+                   lhs.entryLabel = @label
+                   lhs.exitLabels = [@label]
+  | RefAssign'     lhs.nodes = [(@label, ppIExpr @ptr ++ " ref= " ++ ppIExpr @val)]
+                   lhs.edges = []
+                   lhs.entryLabel = @label
+                   lhs.exitLabels = [@label]
+  | Continue'      lhs.nodes = [(@label, "continue")]
+                   lhs.edges = []
+                   lhs.entryLabel = @label
+                   lhs.exitLabels = [@label]
+  | Break'         lhs.nodes = [(@label, "break")]
+                   lhs.edges = []
+                   lhs.entryLabel = @label
+                   lhs.exitLabels = [@label]
+
 {
 plusOne :: Int -> Int
 plusOne = (+1)
@@ -169,4 +280,32 @@ plusOne = (+1)
 procAppend :: Procs -> Procs -> Procs
 procAppend Nil ys = ys
 procAppend (Cons x xs) ys = Cons x (procAppend xs ys)
+
+ppIExpr :: IExpr -> String
+ppIExpr = show
+
+ppBExpr :: BExpr -> String
+ppBExpr = show
+
+instance Show BExpr where
+  show (BConst val) = show val
+  show (BVar name) = name
+  show (LessThan left right) = show left ++ " < " ++ show right
+  show (GreaterThan left right) = show left ++ " > " ++ show right
+  show (LessEqual left right) = show left ++ " <= " ++ show right
+  show (GreaterEqual left right) = show left ++ " >= " ++ show right
+  show (IEqual left right) = show left ++ " == " ++ show right
+  show (BEqual left right) = show left ++ " == " ++ show right
+  show (And left right) = show left ++ " && " ++ show right
+  show (Or left right) = show left ++ " || " ++ show right
+  show (Not val) = "!" ++ show val
+
+instance Show IExpr where
+  show (IConst val) = show val
+  show (Var name) = name
+  show (Plus left right) = show left ++ " + " ++ show right
+  show (Minus left right) = show left ++ " - " ++ show right
+  show (Times left right) = show left ++ " * " ++ show right
+  show (Divide left right) = show left ++ " / " ++ show right
+  show (Deref ptr) = show "*" ++ show ptr
 }

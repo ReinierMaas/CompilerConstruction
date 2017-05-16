@@ -1,5 +1,12 @@
 module Dev where
 
+import Data.GraphViz (graphToDot, fmtNode, fmtEdge, nonClusteredParams)
+import Data.GraphViz.Attributes (toLabel)
+import Data.GraphViz.Printing (toDot, renderDot)
+import Data.Graph.Inductive.Graph
+import qualified Data.Graph.Inductive.Graph as Graph
+import Data.Graph.Inductive.PatriciaTree
+import Data.Text.Lazy (unpack)
 import qualified Data.Map as M
 import qualified Data.List as L
 
@@ -29,6 +36,8 @@ runAnalysis' :: (Eq a, Show a) => (Program' -> Analysis a) -> String -> IO ()
 runAnalysis' analyze programName = do
   p <- parse programName
   let t = snd $ (sem_Program p) 0
+  let (edges, _, _, nodes, _) = sem_Program' t
+  let cfg = insEdges edges $ insNodes nodes Graph.empty :: Gr String String
 
   putStrLn "PARSED INPUT:"
   putStrLn (show p)
@@ -36,9 +45,20 @@ runAnalysis' analyze programName = do
   putStrLn "TRANSFORMED INPUT:"
   putStrLn (show t)
   putStrLn ""
+  putStrLn "CFG:"
+  putStrLn $ renderGraph cfg
+  putStrLn ""
   putStrLn "ANALYSIS:"
   putStrLn ""
   putStrLn "THE END"
+  where
+    renderGraph g = let dot = graphToDot params g
+                        code = renderDot $ toDot dot
+                    in unpack code
+    params = nonClusteredParams { fmtNode = fn, fmtEdge = fe }
+    fn (_, l) = [toLabel l]
+    fe (_, _, l) = [toLabel l]
+
 
 -- parse program
 

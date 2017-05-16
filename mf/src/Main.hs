@@ -22,10 +22,3 @@ myGraph = foldl (\acc x -> x acc) empty cmds
                  , insEdge (1, 2, "")
                  , insEdge (2, 3, "true")
                  , insEdge (2, 4, "false")]
-
-printGraph = let dot = graphToDot params myGraph
-                 code = renderDot $ toDot dot
-             in putStrLn $ unpack code
-    where params = nonClusteredParams { fmtNode = fn, fmtEdge = fe }
-          fn (_, l) = [toLabel l]
-          fe (_, _, l) = [toLabel l]
