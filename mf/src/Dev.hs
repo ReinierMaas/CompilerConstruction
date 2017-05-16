@@ -48,6 +48,9 @@ runAnalysis' analyze programName = do
   putStrLn "CFG:"
   putStrLn $ renderGraph cfg
   putStrLn ""
+  putStrLn "Reachable CFG:"
+  putStrLn $ renderGraph $ reachable cfg
+  putStrLn ""
   putStrLn "ANALYSIS:"
   putStrLn ""
   putStrLn "THE END"
@@ -58,6 +61,7 @@ runAnalysis' analyze programName = do
     params = nonClusteredParams { fmtNode = fn, fmtEdge = fe }
     fn (_, l) = [toLabel l]
     fe (_, _, l) = [toLabel l]
+    reachable = id -- FIXME: implement something to remove all unreachable nodes
 
 
 -- parse program

@@ -130,7 +130,7 @@ sem Procs
   | Nil           lhs.procs   = Nil'
 
 sem Proc
-  | Proc          lhs.proc    = Proc' @lhs.label (plusOne @lhs.label) @name @inp @out @stat.stat
+  | Proc          lhs.proc    = Proc' @lhs.label (@lhs.label + 1) @name @inp @out @stat.stat
                   stat.label  = @lhs.label + 2
                   lhs.label   = @stat.label
 
@@ -144,7 +144,7 @@ sem Stat
   | While         lhs.stat    = While' @lhs.label @cond @stat.stat
                   stat.label  = @lhs.label + 1
                   lhs.label   = @stat.label
-  | Call          lhs.stat    = Call' @lhs.label (plusOne @lhs.label) @name @params @out
+  | Call          lhs.stat    = Call' @lhs.label (@lhs.label + 1) @name @params @out
                   lhs.label   = @lhs.label + 2
   | IAssign       lhs.stat    = IAssign' @lhs.label @name @val
                   lhs.label   = @lhs.label + 1
@@ -164,6 +164,17 @@ sem Stat
                   lhs.label   = @lhs.label + 1
   | Break         lhs.stat    = Break' @lhs.label
                   lhs.label   = @lhs.label + 1
+
+--
+-- Intermediate representation?
+--
+--
+-- data Node
+--   | Statement  label :: Int      pretty :: String
+--   | Call       label :: Int
+--   | Seq        leftLabel :: Int  rightLabel :: Int
+--   | Branch     condLabel :: Int  trueLabel :: Int  falseLabel :: Int
+--   | Goto       thisLabel :: Int  targetLabel :: Int
 
 --------------------
 -- CFG generation --
@@ -190,16 +201,20 @@ attr Proc'
 attr Stat'
   inh innermostWhile :: {Maybe Int}
   inh procLabels :: {Map String (Int, Int)}
+  inh statementAfterWhile :: {Maybe Int}
   syn nodes :: {[LNode String]}
   syn edges :: {[LEdge String]}
   syn entryLabel :: Int
   syn exitLabels :: {[Int]}
   syn isWhile use {const id} {False} :: Bool
+  syn isBreak use {const id} {False} :: Bool
+  syn isContinue use {const id} {False} :: Bool
 
 sem Program'
   | Program'       procs.procLabels = Map.empty
                    stat.procLabels = @procs.procLabels
                    stat.innermostWhile = Nothing
+                   stat.statementAfterWhile = Nothing
                    lhs.procLabels = @procs.procLabels
                    lhs.nodes = @procs.nodes ++ @stat.nodes
                    lhs.edges = @procs.edges ++ @stat.edges
@@ -221,6 +236,7 @@ sem Proc'
                    lhs.edges = (@labelEntry, @stat.entryLabel, "") : (map (\el -> (el, @labelReturn, "")) @stat.exitLabels) ++ @stat.edges
                    stat.procLabels = @lhs.procLabels
                    stat.innermostWhile = Nothing
+                   stat.statementAfterWhile = Nothing
 
 sem Stat'
   | Skip'          lhs.nodes = [(@label, "skip")]
@@ -229,14 +245,15 @@ sem Stat'
                    lhs.exitLabels = [@label]
   | IfThenElse'    stat1.procLabels = @lhs.procLabels
                    stat2.procLabels = @lhs.procLabels
-                   lhs.nodes = [(@label, ppBExpr @cond)] ++ @stat1.nodes ++ @stat2.nodes
+                   lhs.nodes = [(@label, show @cond)] ++ @stat1.nodes ++ @stat2.nodes
                    lhs.edges = [(@label, @stat1.entryLabel, "true"), (@label, @stat2.entryLabel, "false")] ++ @stat1.edges ++ @stat2.edges
                    lhs.entryLabel = @label
                    lhs.exitLabels = @stat1.exitLabels ++ @stat2.exitLabels
   | While'         stat.innermostWhile = Just @label
                    stat.procLabels = @lhs.procLabels
+                   stat.statementAfterWhile = @lhs.statementAfterWhile
                    lhs.isWhile = True
-                   lhs.nodes = [(@label, ppBExpr @cond)] ++ @stat.nodes
+                   lhs.nodes = [(@label, show @cond)] ++ @stat.nodes
                    lhs.edges = [(@label, @stat.entryLabel, "true")] ++ (map (\ep -> (ep, @label, "")) @stat.exitLabels) ++ @stat.edges
                    lhs.entryLabel = @label
                    lhs.exitLabels = [@label]
@@ -245,29 +262,36 @@ sem Stat'
                    lhs.edges = let (i, o) = @lhs.procLabels Map.! @name in [(@label, i, ""), (o, @label, "")]
                    lhs.entryLabel = @label
                    lhs.exitLabels = [@label]
-  | IAssign'       lhs.nodes = [(@label, @name ++ " = " ++ ppIExpr @val)]
+  | IAssign'       lhs.nodes = [(@label, @name ++ " = " ++ show @val)]
                    lhs.edges = []
                    lhs.entryLabel = @label
                    lhs.exitLabels = [@label]
-  | BAssign'       lhs.nodes = [(@label, @name ++ " = " ++ ppBExpr @val)]
+  | BAssign'       lhs.nodes = [(@label, @name ++ " = " ++ show @val)]
                    lhs.edges = []
                    lhs.entryLabel = @label
                    lhs.exitLabels = [@label]
   | Seq'           stat1.procLabels = @lhs.procLabels
                    stat2.procLabels = @lhs.procLabels
+                   stat1.statementAfterWhile = if @stat1.isWhile then Just @stat2.entryLabel else Nothing
                    lhs.nodes = @stat1.nodes ++ @stat2.nodes
-                   lhs.edges = [(head @stat1.exitLabels, @stat2.entryLabel, if @stat1.isWhile then "false" else "")] ++ @stat1.edges ++ @stat2.edges
+                   loc.extraEdges = if @stat1.isBreak then
+                                      case @lhs.statementAfterWhile of
+                                        Just s -> [(head @stat1.exitLabels, s, "")]
+                                        Nothing -> []
+                                    else if @stat1.isContinue then [(head @stat1.exitLabels, Maybe.fromJust @lhs.innermostWhile, "")]
+                                    else [(head @stat1.exitLabels, @stat2.entryLabel, if @stat1.isWhile then "false" else "")]
+                   lhs.edges = @loc.extraEdges ++ @stat1.edges ++ @stat2.edges
                    lhs.entryLabel = @stat1.entryLabel
-                   lhs.exitLabels = @stat2.exitLabels
-  | Malloc'        lhs.nodes = [(@label, "malloc " ++ @name ++ " with size " ++ ppIExpr @size)]
+                   lhs.exitLabels = @stat2.exitLabels ++ if @stat1.isBreak then @stat1.exitLabels else []
+  | Malloc'        lhs.nodes = [(@label, "malloc " ++ @name ++ " with size " ++ show @size)]
                    lhs.edges = []
                    lhs.entryLabel = @label
                    lhs.exitLabels = [@label]
-  | Free'          lhs.nodes = [(@label, "free " ++ ppIExpr @ptr)]
+  | Free'          lhs.nodes = [(@label, "free " ++ show @ptr)]
                    lhs.edges = []
                    lhs.entryLabel = @label
                    lhs.exitLabels = [@label]
-  | RefAssign'     lhs.nodes = [(@label, ppIExpr @ptr ++ " ref= " ++ ppIExpr @val)]
+  | RefAssign'     lhs.nodes = [(@label, show @ptr ++ " ref= " ++ show @val)]
                    lhs.edges = []
                    lhs.entryLabel = @label
                    lhs.exitLabels = [@label]
@@ -275,24 +299,17 @@ sem Stat'
                    lhs.edges = []
                    lhs.entryLabel = @label
                    lhs.exitLabels = [@label]
+                   lhs.isContinue = True
   | Break'         lhs.nodes = [(@label, "break")]
                    lhs.edges = []
                    lhs.entryLabel = @label
                    lhs.exitLabels = [@label]
+                   lhs.isBreak = True
 
 {
-plusOne :: Int -> Int
-plusOne = (+1)
-
 procAppend :: Procs -> Procs -> Procs
 procAppend Nil ys = ys
 procAppend (Cons x xs) ys = Cons x (procAppend xs ys)
-
-ppIExpr :: IExpr -> String
-ppIExpr = show
-
-ppBExpr :: BExpr -> String
-ppBExpr = show
 
 instance Show BExpr where
   show (BConst val) = show val

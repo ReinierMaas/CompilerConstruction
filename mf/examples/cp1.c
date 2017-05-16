@@ -5,5 +5,4 @@ begin
     z := z * y;
     x := x - 1;
   }
-  y := z;
 end
