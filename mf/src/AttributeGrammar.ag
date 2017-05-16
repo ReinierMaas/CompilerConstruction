@@ -188,7 +188,7 @@ attr Proc'
   syn edges :: {[LEdge String]}
 
 attr Stat'
-  inh procLabels :: {Map String (Int, Int)}
+  chn procLabels :: {Map String (Int, Int)}
   syn nodes :: {[LNode String]}
   syn edges :: {[LEdge String]}
   syn entryLabel :: Int
@@ -196,7 +196,8 @@ attr Stat'
 
 sem Program'
   | Program'       procs.procLabels = Map.empty
-                   lhs.procLabels = @procs.procLabels
+                   stat.procLabels = @procs.procLabels
+                   lhs.procLabels = @stat.procLabels
                    lhs.nodes = @procs.nodes ++ @stat.nodes
                    lhs.edges = @procs.edges ++ @stat.edges
                    lhs.entryLabel = @stat.entryLabel
