@@ -37,22 +37,22 @@ runAnalysis' :: (Eq a, Show a) => (Program' -> Analysis a) -> String -> IO ()
 runAnalysis' analyze programName = do
   p <- parse programName
   let t = snd $ (sem_Program p) 0
-  let (edges, entryPoint, _, nodes, _) = sem_Program' t
-  let cfg = mkGraph nodes edges :: Gr String String
+  let (edges, entryPoint, exitLabels, nodes, _) = sem_Program' t
+  let extraNodes = (999999, "Start") : (999998, "End") : nodes
+  let extraEdges = (999999, entryPoint, "") : map (\el -> (el, 999998, "")) exitLabels ++ edges
+  let cfg = mkGraph extraNodes extraEdges :: Gr String String
 
-  putStrLn $ "Entry point: " ++ show entryPoint
   putStrLn "PARSED INPUT:"
   putStrLn (show p)
   putStrLn ""
-  putStrLn "TRANSFORMED INPUT:"
+  putStrLn "LABELLED INPUT:"
   putStrLn (show t)
   putStrLn ""
   putStrLn "CFG:"
   putStrLn $ renderGraph cfg
   putStrLn ""
-  putStrLn $ "Possible entry points: " ++ show (filter (\n -> pre cfg n == []) (Graph.nodes cfg))
-  putStrLn "Reachable CFG:"
-  putStrLn $ renderGraph $ reachable entryPoint cfg
+  putStrLn "REACHABLE CFG:"
+  putStrLn $ renderGraph $ reachable 999999 cfg
   putStrLn ""
   putStrLn "ANALYSIS:"
   putStrLn ""

@@ -188,7 +188,8 @@ attr Program'
   syn exitLabels :: {[Int]}
 
 attr Procs'
-  chn procLabels :: {Map String (Int, Int)}
+  inh allProcLabels :: {Map String (Int, Int)}
+  syn procLabels :: {Map String (Int, Int)}
   syn nodes :: {[LNode String]}
   syn edges :: {[LEdge String]}
 
@@ -199,20 +200,17 @@ attr Proc'
   syn edges :: {[LEdge String]}
 
 attr Stat'
-  inh innermostWhile :: {Maybe Int}
   inh procLabels :: {Map String (Int, Int)}
   syn nodes :: {[LNode String]}
   syn edges :: {[LEdge String]}
   syn entryLabel :: Int
   syn exitLabels :: {[(Int, String)]}
-  syn isWhile use {const id} {False} :: Bool
-  syn isContinue use {const id} {False} :: Bool
+  syn continues use {++} {[]} :: {[Int]}
   syn breaks use {++} {[]} :: {[Int]}
 
 sem Program'
-  | Program'       procs.procLabels = Map.empty
+  | Program'       procs.allProcLabels = @procs.procLabels
                    stat.procLabels = @procs.procLabels
-                   stat.innermostWhile = Nothing
                    lhs.procLabels = @procs.procLabels
                    lhs.nodes = @procs.nodes ++ @stat.nodes
                    lhs.edges = @procs.edges ++ @stat.edges
@@ -220,20 +218,19 @@ sem Program'
                    lhs.exitLabels = map fst @stat.exitLabels
 
 sem Procs'
-  | Cons'          procs.procLabels = Map.union @lhs.procLabels @proc.procLabel
-                   lhs.procLabels = @procs.procLabels
-                   proc.procLabels = @lhs.procLabels
+  | Cons'          lhs.procLabels = Map.union @procs.procLabels @proc.procLabel
+                   proc.procLabels = @lhs.allProcLabels
                    lhs.nodes = @procs.nodes ++ @proc.nodes
                    lhs.edges = @procs.edges ++ @proc.edges
   | Nil'           lhs.nodes = []
                    lhs.edges = []
+                   lhs.procLabels = Map.empty
 
 sem Proc'
   | Proc'          lhs.procLabel = Map.singleton @name (@labelEntry, @labelReturn)
                    lhs.nodes = [(@labelEntry, "Entry to proc " ++ @name), (@labelReturn, "Return from proc " ++ @name)] ++ @stat.nodes
                    lhs.edges = (@labelEntry, @stat.entryLabel, "") : (map (\(lx, s) -> (lx, @labelReturn, s)) @stat.exitLabels) ++ @stat.edges
                    stat.procLabels = @lhs.procLabels
-                   stat.innermostWhile = Nothing
 
 sem Stat'
   | Skip'          lhs.nodes = [(@label, "skip")]
@@ -246,11 +243,12 @@ sem Stat'
                    lhs.edges = [(@label, @stat1.entryLabel, "true"), (@label, @stat2.entryLabel, "false")] ++ @stat1.edges ++ @stat2.edges
                    lhs.entryLabel = @label
                    lhs.exitLabels = @stat1.exitLabels ++ @stat2.exitLabels
-  | While'         stat.innermostWhile = Just @label
-                   stat.procLabels = @lhs.procLabels
-                   lhs.isWhile = True
+  | While'         stat.procLabels = @lhs.procLabels
                    lhs.nodes = [(@label, show @cond)] ++ @stat.nodes
-                   lhs.edges = [(@label, @stat.entryLabel, "true")] ++ (map (\(lx, s) -> (lx, @label, s)) @stat.exitLabels) ++ @stat.edges
+                   lhs.edges = [(@label, @stat.entryLabel, "true")] ++
+                               (map (\(lx, s) -> (lx, @label, s)) @stat.exitLabels) ++
+                               (map (\l -> (l, @label, "")) @stat.continues) ++
+                               @stat.edges
                    lhs.entryLabel = @label
                    lhs.exitLabels = (@label, "false") : map (\b -> (b, "")) @stat.breaks
   | Call'          loc.label = @labelCall
@@ -269,9 +267,7 @@ sem Stat'
   | Seq'           stat1.procLabels = @lhs.procLabels
                    stat2.procLabels = @lhs.procLabels
                    lhs.nodes = @stat1.nodes ++ @stat2.nodes
-                   loc.extraEdges = if @stat1.isContinue then [(@stat1.entryLabel, Maybe.fromJust @lhs.innermostWhile, "")]
-                                    else map (\(lx, s) -> (lx, @stat2.entryLabel, s)) @stat1.exitLabels
-                   lhs.edges = @loc.extraEdges ++ @stat1.edges ++ @stat2.edges
+                   lhs.edges = map (\(lx, s) -> (lx, @stat2.entryLabel, s)) @stat1.exitLabels ++ @stat1.edges ++ @stat2.edges
                    lhs.entryLabel = @stat1.entryLabel
                    lhs.exitLabels = @stat2.exitLabels
   | Malloc'        lhs.nodes = [(@label, "malloc " ++ @name ++ " with size " ++ show @size)]
@@ -290,7 +286,7 @@ sem Stat'
                    lhs.edges = []
                    lhs.entryLabel = @label
                    lhs.exitLabels = []
-                   lhs.isContinue = True
+                   lhs.continues = [@label]
   | Break'         lhs.nodes = [(@label, "break")]
                    lhs.edges = []
                    lhs.entryLabel = @label
