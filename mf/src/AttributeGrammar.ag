@@ -251,6 +251,8 @@ sem Stat'
                                @stat.edges
                    lhs.entryLabel = @label
                    lhs.exitLabels = (@label, "false") : map (\b -> (b, "")) @stat.breaks
+                   lhs.breaks = []
+                   lhs.continues = []
   | Call'          loc.label = @labelCall
                    lhs.nodes = [(@label, "call proc " ++ @name)]
                    lhs.edges = let (i, o) = @lhs.procLabels Map.! @name in [(@label, i, ""), (o, @label, "")]
