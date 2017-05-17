@@ -165,17 +165,6 @@ sem Stat
   | Break         lhs.stat    = Break' @lhs.label
                   lhs.label   = @lhs.label + 1
 
---
--- Intermediate representation?
---
---
--- data Node
---   | Statement  label :: Int      pretty :: String
---   | Call       label :: Int
---   | Seq        leftLabel :: Int  rightLabel :: Int
---   | Branch     condLabel :: Int  trueLabel :: Int  falseLabel :: Int
---   | Goto       thisLabel :: Int  targetLabel :: Int
-
 --------------------
 -- CFG generation --
 --------------------
@@ -186,18 +175,21 @@ attr Program'
   syn edges :: {[LEdge String]}
   syn entryLabel :: Int
   syn exitLabels :: {[Int]}
+  syn errors use {++} {[]} :: {[Error]}
 
 attr Procs'
   inh allProcLabels :: {Map String (Int, Int)}
   syn procLabels :: {Map String (Int, Int)}
   syn nodes :: {[LNode String]}
   syn edges :: {[LEdge String]}
+  syn errors use {++} {[]} :: {[Error]}
 
 attr Proc'
   inh procLabels :: {Map String (Int, Int)}
   syn procLabel :: {Map String (Int, Int)}
   syn nodes :: {[LNode String]}
   syn edges :: {[LEdge String]}
+  syn errors use {++} {[]} :: {[Error]}
 
 attr Stat'
   inh procLabels :: {Map String (Int, Int)}
@@ -216,6 +208,7 @@ sem Program'
                    lhs.edges = @procs.edges ++ @stat.edges
                    lhs.entryLabel = @stat.entryLabel
                    lhs.exitLabels = map fst @stat.exitLabels
+                   lhs.errors = @procs.errors ++ standaloneBreaks @stat.breaks ++ standaloneContinues @stat.continues
 
 sem Procs'
   | Cons'          lhs.procLabels = Map.union @procs.procLabels @proc.procLabel
@@ -231,6 +224,7 @@ sem Proc'
                    lhs.nodes = [(@labelEntry, "Entry to proc " ++ @name), (@labelReturn, "Return from proc " ++ @name)] ++ @stat.nodes
                    lhs.edges = (@labelEntry, @stat.entryLabel, "") : (map (\(lx, s) -> (lx, @labelReturn, s)) @stat.exitLabels) ++ @stat.edges
                    stat.procLabels = @lhs.procLabels
+                   lhs.errors = standaloneBreaks @stat.breaks ++ standaloneContinues @stat.continues
 
 sem Stat'
   | Skip'          lhs.nodes = [(@label, "skip")]
@@ -296,6 +290,14 @@ sem Stat'
                    lhs.breaks = [@label]
 
 {
+data Error = StandaloneContinue Int
+           | StandaloneBreak Int
+           deriving (Show)
+
+standaloneContinues, standaloneBreaks :: [Int] -> [Error]
+standaloneContinues = map StandaloneContinue
+standaloneBreaks = map StandaloneBreak
+
 procAppend :: Procs -> Procs -> Procs
 procAppend Nil ys = ys
 procAppend (Cons x xs) ys = Cons x (procAppend xs ys)
