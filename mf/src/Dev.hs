@@ -14,6 +14,7 @@ import qualified Data.List as L
 import AttributeGrammar
 import Lexer
 import Main
+import Monotone
 import Parser
 
 -- To make it all compile for the moment:
@@ -26,7 +27,12 @@ ghci> run slv "fib"
 
 --}
 
-slv = undefined
+slv :: ((Gr () () -> [Int]), a)
+slv = (
+  -- genExtremalLabels
+  \g -> [],
+
+)
 cp  = undefined
 
 run :: (Eq a, Show a) => (Program' -> Analysis a) -> String -> IO ()

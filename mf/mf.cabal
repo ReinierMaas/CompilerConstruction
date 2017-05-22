@@ -24,6 +24,7 @@ executable mf
                        Parser
                        Dev
                        AttributeGrammar
+                       Monotone
   build-depends:       base,
                        containers,
                        text,
