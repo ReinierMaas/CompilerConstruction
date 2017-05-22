@@ -1,7 +1,7 @@
 module Monotone where
 
 import Control.Applicative ((<|>))
-import Data.Maybe (fromMaybe, maybe)
+import Data.Maybe (fromJust, fromMaybe, isNothing, maybe)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
@@ -24,9 +24,9 @@ mfp nodes extremalLabels extremalValue transitions transfer join =
     iterate [] x = x
     iterate ((l, l') : ls) x = let trans = transfer (nodes Map.! l) (Map.lookup l x)
                                    joined = joinStuff join (Map.lookup l' x) trans
-                               in  if Map.lookup l' x == joined
+                               in  if isNothing joined || Map.lookup l' x == joined
                                    then iterate ls x
-                                   else iterate (edgesFrom l' transitions ++ ls) (Map.insert l' joined x)
+                                   else iterate (edgesFrom l' transitions ++ ls) (Map.insert l' (fromJust joined) x)
 
 data ConstData = Top
                | Nat Int
@@ -63,9 +63,20 @@ evalB input = eval
     combineI op (Nat x) (Nat y) = Bool (op x y)
     combineI _ _ _ = Top
     eval :: BExpr -> ConstData
-    eval (BConst v) = Just v
-    eval (BVar n) =  Map.lookup n input
-    eval _ = undefined
+    eval (BConst v) = Bool v
+    eval (BVar n) = fromMaybe Top (Map.lookup n input)
+    eval (LessThan x y) = combineI (<) (evalI input x) (evalI input y)
+    eval (GreaterThan x y) = combineI (>) (evalI input x) (evalI input y)
+    eval (LessEqual x y) = combineI (<=) (evalI input x) (evalI input y)
+    eval (GreaterEqual x y) = combineI (>=) (evalI input x) (evalI input y)
+    eval (IEqual x y) = combineI (==) (evalI input x) (evalI input y)
+    eval (BEqual x y) = combineB (==) (eval x) (eval y)
+    eval (And x y) = combineB (&&) (eval x) (eval y)
+    eval (Or x y) = combineB (||) (eval x) (eval y)
+    eval (Not x) = notConstData (eval x)
+    notConstData :: ConstData -> ConstData
+    notConstData (Bool x) = Bool (not x)
+    notConstData x = x
 
 constJoin :: Map String ConstData -> Map String ConstData -> Map String ConstData
 constJoin = Map.unionWith joinSingle
