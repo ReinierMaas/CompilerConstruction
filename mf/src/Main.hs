@@ -9,6 +9,7 @@ import Data.Text.Lazy (unpack)
 
 import Lexer
 import Parser
+import Monotone
 
 main :: IO ()
 main = undefined
