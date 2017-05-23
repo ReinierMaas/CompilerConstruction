@@ -27,12 +27,13 @@ ghci> run slv "fib"
 
 --}
 
-slv :: ((Gr () () -> [Int]), a)
-slv = (
-  -- genExtremalLabels
-  \g -> [],
-
-)
+-- slv :: ((Gr () () -> [Int]), a)
+slv = undefined
+--  (
+--  -- genExtremalLabels
+--  \g -> [],
+--
+--)
 cp  = undefined
 
 run :: (Eq a, Show a) => (Program' -> Analysis a) -> String -> IO ()

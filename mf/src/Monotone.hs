@@ -11,22 +11,24 @@ joinStuff :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
 joinStuff join (Just x) (Just y) = Just $ join x y
 joinStuff _ x y = x <|> y
 
-mfp :: Eq a => Map Int Stat' -> [Int] -> a -> [(Int, Int)] -> (Stat' -> Maybe a -> Maybe a) -> (a -> a -> a) -> (Map Int a, Map Int a)
+mfp :: Eq a => Map Int Stat' -> [Int] -> a -> [(Int, Int)] -> (Stat' -> Maybe a -> Maybe a) -> (a -> a -> a) -> (Map Int (Maybe a), Map Int (Maybe a))
 mfp nodes extremalLabels extremalValue transitions transfer join =
-    let a = Map.fromList $ map (\l -> (l, extremalValue)) extremalLabels
-        openMfp = iterate transitions a
-        openMfp' = Map.mapKeys (nodes Map.!) (Map.mapWithKey (\k v -> (k, v)) openMfp)
-        closedMfp = Map.mapWithKey (\k (l, v) -> (l, transfer k v)) openMfp'
-        closedMfp' = Map.fromList $ map snd $ Map.toList closedMfp
-    in  (openMfp, closedMfp')
-    where
-    --iterate :: [(Int, Int)] -> Maybe (Map Int a) -> Maybe (Map Int a)
-    iterate [] x = x
-    iterate ((l, l') : ls) x = let trans = transfer (nodes Map.! l) (Map.lookup l x)
-                                   joined = joinStuff join (Map.lookup l' x) trans
-                               in  if isNothing joined || Map.lookup l' x == joined
-                                   then iterate ls x
-                                   else iterate (edgesFrom l' transitions ++ ls) (Map.insert l' (fromJust joined) x)
+    let a = Map.fromList $ map (\l -> (l, Just extremalValue)) extremalLabels
+        openMfp = iterate' nodes transitions transfer join transitions a
+        closedMfp = Map.mapWithKey (\l v -> transfer (nodes Map.! l) v) openMfp
+    in  (openMfp, closedMfp)
+
+iterate' :: Eq a => Map Int Stat' -> [(Int, Int)] -> (Stat' -> Maybe a -> Maybe a) -> (a -> a -> a) -> [(Int, Int)] -> Map Int (Maybe a) -> Map Int (Maybe a)
+iterate' nodes transitions transfer join [] a = a
+iterate' nodes transitions transfer join ((l, l') : ls) a = let trans = transfer (nodes Map.! l) (joinMaybe (Map.lookup l a))
+                                                                joined = joinStuff join trans (joinMaybe (Map.lookup l' a))
+                                                            in  if (joinMaybe (Map.lookup l' a)) == joined
+                                                                then iterate' nodes transitions transfer join ls a
+                                                                else iterate' nodes transitions transfer join (edgesFrom l' transitions ++ ls) (Map.insert l' joined a)
+
+joinMaybe :: Maybe (Maybe a) -> Maybe a
+joinMaybe (Just x) = x
+joinMaybe Nothing = Nothing
 
 data ConstData = Top
                | Nat Int
