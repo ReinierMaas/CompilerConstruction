@@ -1,39 +1,49 @@
 module Monotone where
 
 import Control.Applicative ((<|>))
+import Control.Monad (join)
 import Data.Maybe (fromJust, fromMaybe, isNothing, maybe)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
 import AttributeGrammar
 
-joinStuff :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
-joinStuff join (Just x) (Just y) = Just $ join x y
-joinStuff _ x y = x <|> y
+mergeStuff :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
+mergeStuff merge (Just x) (Just y) = Just $ merge x y
+mergeStuff _ x y = x <|> y
 
 mfp :: Eq a => Map Int Stat' -> [Int] -> a -> [(Int, Int)] -> (Stat' -> Maybe a -> Maybe a) -> (a -> a -> a) -> (Map Int (Maybe a), Map Int (Maybe a))
-mfp nodes extremalLabels extremalValue transitions transfer join =
-    let a = Map.fromList $ map (\l -> (l, Just extremalValue)) extremalLabels
-        openMfp = iterate' nodes transitions transfer join transitions a
+mfp nodes extremalLabels extremalValue transitions transfer merge =
+    let nothings = fmap (const Nothing) nodes
+        justs = Map.fromList $ map (\l -> (l, Just extremalValue)) extremalLabels
+        a = justs `Map.union` nothings -- Note: in case of duplicated keys, justs is preferred
+        openMfp = fixpoint a transitions
         closedMfp = Map.mapWithKey (\l v -> transfer (nodes Map.! l) v) openMfp
     in  (openMfp, closedMfp)
-
-iterate' :: Eq a => Map Int Stat' -> [(Int, Int)] -> (Stat' -> Maybe a -> Maybe a) -> (a -> a -> a) -> [(Int, Int)] -> Map Int (Maybe a) -> Map Int (Maybe a)
-iterate' nodes transitions transfer join [] a = a
-iterate' nodes transitions transfer join ((l, l') : ls) a = let trans = transfer (nodes Map.! l) (joinMaybe (Map.lookup l a))
-                                                                joined = joinStuff join trans (joinMaybe (Map.lookup l' a))
-                                                            in  if (joinMaybe (Map.lookup l' a)) == joined
-                                                                then iterate' nodes transitions transfer join ls a
-                                                                else iterate' nodes transitions transfer join (edgesFrom l' transitions ++ ls) (Map.insert l' joined a)
-
-joinMaybe :: Maybe (Maybe a) -> Maybe a
-joinMaybe (Just x) = x
-joinMaybe Nothing = Nothing
+    where
+    fixpoint a [] = a
+    fixpoint a ((l, l') : ls) = let trans = transfer (nodes Map.! l) (a Map.! l)
+                                    merged = mergeStuff merge trans (a Map.! l')
+                                in  if (a Map.! l') == merged
+                                    then fixpoint a ls
+                                    else fixpoint (Map.insert l' merged a) (edgesFrom l' transitions ++ ls)
+    edgesFrom :: Int -> [(Int, Int)] -> [(Int, Int)]
+    edgesFrom x = filter (\(l, _) -> l == x)
 
 data ConstData = Top
                | Nat Int
                | Bool Bool
                deriving (Eq, Show)
+
+constExtremalValue :: Map String ConstData
+constExtremalValue = Map.empty
+
+constMerge :: Map String ConstData -> Map String ConstData -> Map String ConstData
+constMerge = Map.unionWith mergeSingle
+    where
+    mergeSingle :: ConstData -> ConstData -> ConstData
+    mergeSingle x y | x == y = x
+                    | otherwise = Top
 
 constTransfer :: Stat' -> Maybe (Map String ConstData) -> Maybe (Map String ConstData)
 constTransfer (IAssign' _ name val) (Just input) = Just $ Map.insert name (evalI input val) input
@@ -79,15 +89,3 @@ evalB input = eval
     notConstData :: ConstData -> ConstData
     notConstData (Bool x) = Bool (not x)
     notConstData x = x
-
-constJoin :: Map String ConstData -> Map String ConstData -> Map String ConstData
-constJoin = Map.unionWith joinSingle
-    where
-    joinSingle :: ConstData -> ConstData -> ConstData
-    joinSingle x y | x == y = x
-                   | otherwise = Top
-
-
-
-edgesFrom :: Int -> [(Int, Int)] -> [(Int, Int)]
-edgesFrom x = filter (\(l, _) -> l == x)

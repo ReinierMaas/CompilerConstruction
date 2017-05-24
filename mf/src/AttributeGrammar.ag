@@ -94,13 +94,9 @@ data Expr
   | I             IExpr
 deriving Expr : Eq, Show
 
-data Code
-  | CBExpr        BExpr
-  | CIExpr        IExpr
-  | CStat         Stat'
-  | CProc         Proc'
-  | CProgram      Program'
-deriving Code : Show
+data ProcOrStat
+  | P Proc'
+  | S Stat'
 
 ----------------------------------------
 -- Program to Program' transformation --
@@ -171,7 +167,7 @@ sem Stat
 
 attr Program'
   syn procLabels :: {Map String (Int, Int)}
-  syn nodes :: {[LNode String]}
+  syn nodes :: {[LNode ProcOrStat]}
   syn edges :: {[LEdge String]}
   syn entryLabel :: Int
   syn exitLabels :: {[Int]}
@@ -180,31 +176,33 @@ attr Program'
 attr Procs'
   inh allProcLabels :: {Map String (Int, Int)}
   syn procLabels :: {Map String (Int, Int)}
-  syn nodes :: {[LNode String]}
+  syn nodes :: {[LNode ProcOrStat]}
   syn edges :: {[LEdge String]}
   syn errors use {++} {[]} :: {[Error]}
 
 attr Proc'
   inh procLabels :: {Map String (Int, Int)}
   syn procLabel :: {Map String (Int, Int)}
-  syn nodes :: {[LNode String]}
+  syn nodes :: {[LNode ProcOrStat]}
   syn edges :: {[LEdge String]}
   syn errors use {++} {[]} :: {[Error]}
+  syn copy :: self
 
 attr Stat'
   inh procLabels :: {Map String (Int, Int)}
-  syn nodes :: {[LNode String]}
+  syn nodes :: {[LNode Stat']}
   syn edges :: {[LEdge String]}
   syn entryLabel :: Int
   syn exitLabels :: {[(Int, String)]}
   syn continues use {++} {[]} :: {[Int]}
   syn breaks use {++} {[]} :: {[Int]}
+  syn copy :: self
 
 sem Program'
   | Program'       procs.allProcLabels = @procs.procLabels
                    stat.procLabels = @procs.procLabels
                    lhs.procLabels = @procs.procLabels
-                   lhs.nodes = @procs.nodes ++ @stat.nodes
+                   lhs.nodes = @procs.nodes ++ (mapS @stat.nodes)
                    lhs.edges = @procs.edges ++ @stat.edges
                    lhs.entryLabel = @stat.entryLabel
                    lhs.exitLabels = map fst @stat.exitLabels
@@ -221,24 +219,24 @@ sem Procs'
 
 sem Proc'
   | Proc'          lhs.procLabel = Map.singleton @name (@labelEntry, @labelReturn)
-                   lhs.nodes = [(@labelEntry, "Entry to proc " ++ @name), (@labelReturn, "Return from proc " ++ @name)] ++ @stat.nodes
+                   lhs.nodes = [(@labelEntry, P @copy), (@labelReturn, P @copy)] ++ (mapS @stat.nodes)
                    lhs.edges = (@labelEntry, @stat.entryLabel, "") : (map (\(lx, s) -> (lx, @labelReturn, s)) @stat.exitLabels) ++ @stat.edges
                    stat.procLabels = @lhs.procLabels
                    lhs.errors = standaloneBreaks @stat.breaks ++ standaloneContinues @stat.continues
 
 sem Stat'
-  | Skip'          lhs.nodes = [(@label, "skip")]
+  | Skip'          lhs.nodes = [(@label, @copy)]
                    lhs.edges = []
                    lhs.entryLabel = @label
                    lhs.exitLabels = single @label
   | IfThenElse'    stat1.procLabels = @lhs.procLabels
                    stat2.procLabels = @lhs.procLabels
-                   lhs.nodes = [(@label, show @cond)] ++ @stat1.nodes ++ @stat2.nodes
+                   lhs.nodes = [(@label, @copy)] ++ @stat1.nodes ++ @stat2.nodes
                    lhs.edges = [(@label, @stat1.entryLabel, "true"), (@label, @stat2.entryLabel, "false")] ++ @stat1.edges ++ @stat2.edges
                    lhs.entryLabel = @label
                    lhs.exitLabels = @stat1.exitLabels ++ @stat2.exitLabels
   | While'         stat.procLabels = @lhs.procLabels
-                   lhs.nodes = [(@label, show @cond)] ++ @stat.nodes
+                   lhs.nodes = [(@label, @copy)] ++ @stat.nodes
                    lhs.edges = [(@label, @stat.entryLabel, "true")] ++
                                (map (\(lx, s) -> (lx, @label, s)) @stat.exitLabels) ++
                                (map (\l -> (l, @label, "")) @stat.continues) ++
@@ -248,15 +246,15 @@ sem Stat'
                    lhs.breaks = []
                    lhs.continues = []
   | Call'          loc.label = @labelCall
-                   lhs.nodes = [(@label, "call proc " ++ @name)]
+                   lhs.nodes = [(@label, @copy)]
                    lhs.edges = let (i, o) = @lhs.procLabels Map.! @name in [(@label, i, ""), (o, @label, "")]
                    lhs.entryLabel = @label
                    lhs.exitLabels = single @label
-  | IAssign'       lhs.nodes = [(@label, @name ++ " = " ++ show @val)]
+  | IAssign'       lhs.nodes = [(@label, @copy)]
                    lhs.edges = []
                    lhs.entryLabel = @label
                    lhs.exitLabels = single @label
-  | BAssign'       lhs.nodes = [(@label, @name ++ " = " ++ show @val)]
+  | BAssign'       lhs.nodes = [(@label, @copy)]
                    lhs.edges = []
                    lhs.entryLabel = @label
                    lhs.exitLabels = single @label
@@ -266,24 +264,24 @@ sem Stat'
                    lhs.edges = map (\(lx, s) -> (lx, @stat2.entryLabel, s)) @stat1.exitLabels ++ @stat1.edges ++ @stat2.edges
                    lhs.entryLabel = @stat1.entryLabel
                    lhs.exitLabels = @stat2.exitLabels
-  | Malloc'        lhs.nodes = [(@label, "malloc " ++ @name ++ " with size " ++ show @size)]
+  | Malloc'        lhs.nodes = [(@label, @copy)]
                    lhs.edges = []
                    lhs.entryLabel = @label
                    lhs.exitLabels = single @label
-  | Free'          lhs.nodes = [(@label, "free " ++ show @ptr)]
+  | Free'          lhs.nodes = [(@label, @copy)]
                    lhs.edges = []
                    lhs.entryLabel = @label
                    lhs.exitLabels = single @label
-  | RefAssign'     lhs.nodes = [(@label, show @ptr ++ " ref= " ++ show @val)]
+  | RefAssign'     lhs.nodes = [(@label, @copy)]
                    lhs.edges = []
                    lhs.entryLabel = @label
                    lhs.exitLabels = single @label
-  | Continue'      lhs.nodes = [(@label, "continue")]
+  | Continue'      lhs.nodes = [(@label, @copy)]
                    lhs.edges = []
                    lhs.entryLabel = @label
                    lhs.exitLabels = []
                    lhs.continues = [@label]
-  | Break'         lhs.nodes = [(@label, "break")]
+  | Break'         lhs.nodes = [(@label, @copy)]
                    lhs.edges = []
                    lhs.entryLabel = @label
                    lhs.exitLabels = []
@@ -304,6 +302,31 @@ procAppend (Cons x xs) ys = Cons x (procAppend xs ys)
 
 single :: Int -> [(Int, String)]
 single x = [(x, "")]
+
+mapS :: [(Int, Stat')] -> [(Int, ProcOrStat)]
+mapS = map (\(x, s) -> (x, S s))
+
+getStat :: ProcOrStat -> Maybe Stat'
+getStat (S s) = Just s
+getStat _ = Nothing
+
+showS :: Stat' -> String
+showS (Skip' _) = "skip"
+showS (IfThenElse' _ cond _ _) = show cond
+showS (While' _ cond _) = show cond
+showS (Call' _ _ name _ _) = "call proc " ++ name
+showS (IAssign' _ name val) = name ++ " = " ++ show val
+showS (BAssign' _ name val) = name ++ " = " ++ show val
+showS (Malloc' _ name size) = "malloc " ++ name ++ " with size " ++ show size
+showS (Free' _ ptr) = "free " ++ show ptr
+showS (RefAssign' _ ptr val) = show ptr ++ " ref= " ++ show val
+showS (Continue' _) = "continue"
+showS (Break' _) = "break"
+showS (Seq' _ _) = error "Called showS on Seq"
+
+instance Show ProcOrStat where
+  show (P (Proc' _ _ name _ _ _)) = "proc " ++ name ++ " (entry or exit)"
+  show (S s) = showS s
 
 instance Show BExpr where
   show (BConst val) = show val
