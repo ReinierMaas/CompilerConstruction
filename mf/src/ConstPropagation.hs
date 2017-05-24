@@ -1,4 +1,9 @@
-module ConstPropagation where
+module ConstPropagation (
+    extremalValue,
+    merge,
+    transfer,
+    Result(..)
+) where
 
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -6,33 +11,33 @@ import Data.Maybe (fromMaybe)
 
 import AttributeGrammar
 
-data ConstData = Top
-               | Nat Int
-               | Bool Bool
-               deriving (Eq, Show)
+data Result = Top
+            | Nat Int
+            | Bool Bool
+            deriving (Eq, Show)
 
-constExtremalValue :: Map String ConstData
-constExtremalValue = Map.empty
+extremalValue :: Map String Result
+extremalValue = Map.empty
 
-constMerge :: Map String ConstData -> Map String ConstData -> Map String ConstData
-constMerge = Map.unionWith mergeSingle
+merge :: Map String Result -> Map String Result -> Map String Result
+merge = Map.unionWith mergeSingle
     where
-    mergeSingle :: ConstData -> ConstData -> ConstData
+    mergeSingle :: Result -> Result -> Result
     mergeSingle x y | x == y = x
                     | otherwise = Top
 
-constTransfer :: Stat' -> Maybe (Map String ConstData) -> Maybe (Map String ConstData)
-constTransfer (IAssign' _ name val) (Just input) = Just $ Map.insert name (evalI input val) input
-constTransfer (BAssign' l name val) (Just input) = Just $ Map.insert name (evalB input val) input
-constTransfer _ input = input
+transfer :: Stat' -> Maybe (Map String Result) -> Maybe (Map String Result)
+transfer (IAssign' _ name val) (Just input) = Just $ Map.insert name (evalI input val) input
+transfer (BAssign' l name val) (Just input) = Just $ Map.insert name (evalB input val) input
+transfer _ input = input
 
-evalI :: Map String ConstData -> IExpr -> ConstData
+evalI :: Map String Result -> IExpr -> Result
 evalI input = eval
     where
-    combine :: (Int -> Int -> Int) -> ConstData -> ConstData -> ConstData
+    combine :: (Int -> Int -> Int) -> Result -> Result -> Result
     combine op (Nat x) (Nat y) = Nat (op x y)
     combine _ _ _ = Top
-    eval :: IExpr -> ConstData
+    eval :: IExpr -> Result
     eval (IConst v) = Nat v
     eval (Var n) = fromMaybe Top (Map.lookup n input)
     eval (Plus x y) = combine (+) (eval x) (eval y)
@@ -41,16 +46,16 @@ evalI input = eval
     eval (Divide x y) = combine div (eval x) (eval y)
     eval (Deref x) = eval x
 
-evalB :: Map String ConstData -> BExpr -> ConstData
+evalB :: Map String Result -> BExpr -> Result
 evalB input = eval
     where
-    combineB :: (Bool -> Bool -> Bool) -> ConstData -> ConstData -> ConstData
+    combineB :: (Bool -> Bool -> Bool) -> Result -> Result -> Result
     combineB op (Bool x) (Bool y) = Bool (op x y)
     combineB _ _ _ = Top
-    combineI :: (Int -> Int -> Bool) -> ConstData -> ConstData -> ConstData
+    combineI :: (Int -> Int -> Bool) -> Result -> Result -> Result
     combineI op (Nat x) (Nat y) = Bool (op x y)
     combineI _ _ _ = Top
-    eval :: BExpr -> ConstData
+    eval :: BExpr -> Result
     eval (BConst v) = Bool v
     eval (BVar n) = fromMaybe Top (Map.lookup n input)
     eval (LessThan x y) = combineI (<) (evalI input x) (evalI input y)
@@ -61,7 +66,7 @@ evalB input = eval
     eval (BEqual x y) = combineB (==) (eval x) (eval y)
     eval (And x y) = combineB (&&) (eval x) (eval y)
     eval (Or x y) = combineB (||) (eval x) (eval y)
-    eval (Not x) = notConstData (eval x)
-    notConstData :: ConstData -> ConstData
-    notConstData (Bool x) = Bool (not x)
-    notConstData x = x
+    eval (Not x) = notResult (eval x)
+    notResult :: Result -> Result
+    notResult (Bool x) = Bool (not x)
+    notResult x = x
