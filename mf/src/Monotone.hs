@@ -12,14 +12,13 @@ mergeStuff :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
 mergeStuff merge (Just x) (Just y) = Just $ merge x y
 mergeStuff _ x y = x <|> y
 
-mfp :: Eq a => Map Int Stat' -> [Int] -> a -> [(Int, Int)] -> (Stat' -> Maybe a -> Maybe a) -> (a -> a -> a) -> (Map Int (Maybe a), Map Int (Maybe a))
+mfp :: Eq a => Map Int Stat' -> [Int] -> a -> [(Int, Int)] -> (Stat' -> Maybe a -> Maybe a) -> (a -> a -> a) -> Map Int (Maybe a, Maybe a)
 mfp nodes extremalLabels extremalValue transitions transfer merge =
     let nothings = fmap (const Nothing) nodes
         justs = Map.fromList $ map (\l -> (l, Just extremalValue)) extremalLabels
         a = justs `Map.union` nothings -- Note: in case of duplicated keys, justs is preferred
         openMfp = fixpoint a transitions
-        closedMfp = Map.mapWithKey (\l v -> transfer (nodes Map.! l) v) openMfp
-    in  (openMfp, closedMfp)
+    in  Map.mapWithKey (\l v -> (v, transfer (nodes Map.! l) v)) openMfp
     where
     fixpoint a [] = a
     fixpoint a ((l, l') : ls) = let trans = transfer (nodes Map.! l) (a Map.! l)

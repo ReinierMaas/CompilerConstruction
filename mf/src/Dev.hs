@@ -38,18 +38,19 @@ slv = undefined
 --  \g -> [],
 --
 --)
-cp :: Gr ProcOrStat () -> (Map Int (Maybe (Map String ConstData)), Map Int (Maybe (Map String ConstData)))
+
+cp :: Gr ProcOrStat () -> Map Int (Maybe (Map String ConstData), Maybe (Map String ConstData))
 cp graph = mfp nodes [999999] constExtremalValue (edges graph) constTransfer constMerge
   where
   nodes :: Map Int Stat' -- (Int, ProcOrStat)
   nodes = M.fromList $ mapMaybe (\(l, ps) -> (l,) <$> getStat ps) $ labNodes graph
 
-run :: (Eq a, Show a) => (Program' -> Analysis a) -> String -> IO ()
+run :: String -> IO ()
 run = runAnalysis'
 
 -- run some analysis by passing an analysis function and a 'show' function to display the result
-runAnalysis' :: (Eq a, Show a) => (Program' -> Analysis a) -> String -> IO ()
-runAnalysis' analyze programName = do
+runAnalysis' :: String -> IO ()
+runAnalysis' programName = do
   p <- parse programName
   let t = snd $ (sem_Program p) 0
   let (edges, entryPoint, errors, exitLabels, nodes, _) = sem_Program' t
@@ -70,15 +71,17 @@ runAnalysis' analyze programName = do
     putStrLn "REACHABLE CFG:"
     putStrLn $ renderGraph $ nmap show $ reachable 999999 cfg
     putStrLn ""
-    putStrLn "ANALYSIS (OPEN):"
-    let (open, closed) = cp $ emap (const ()) cfg
-    putStrLn $ renderAnalysis open (map fst extraNodes) extraEdges
-    putStrLn "ANALYSIS (CLOSED):"
-    putStrLn $ renderAnalysis closed (map fst extraNodes) extraEdges
+    putStrLn "ANALYSIS:"
+    let cpAnalysis = fmap (\(x, y) -> showJust x ++ "\n" ++ showJust y) $ cp $ emap (const ()) cfg
+    putStrLn $ renderAnalysis cpAnalysis (map fst extraNodes) extraEdges
     putStrLn ""
   else putStrLn $ "Errors: " ++ show errors
   putStrLn "THE END"
 
+showJust (Just x) = show $ M.toList x
+showJust (Nothing) = "-"
+
+renderGraph :: Gr String String -> String
 renderGraph g = let dot = graphToDot params g
                     code = renderDot $ toDot dot
                 in  unpack code
@@ -87,15 +90,11 @@ renderGraph g = let dot = graphToDot params g
   fn (_, l) = [toLabel l]
   fe (_, _, l) = [toLabel l]
 
-renderAnalysis :: Show a => Map Int a -> [Int] -> [(Int, Int, String)] -> String
+renderAnalysis :: Map Int String -> [Int] -> [(Int, Int, String)] -> String
 renderAnalysis analysis nodes edges =
   let anNodes = map (\l -> (l, analysis M.! l)) nodes
       graph = mkGraph anNodes edges
-  in  renderGraph $ nmap show $ stupid graph
-  where
-  -- Necessary to help type inference
-  stupid :: Gr a b -> Gr a b
-  stupid = id
+  in  renderGraph graph
 
 -- Removes unreachable nodes from the graph.
 -- We select all nodes that are reachable from the entry point and discard anything else.
