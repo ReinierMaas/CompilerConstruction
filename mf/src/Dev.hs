@@ -19,6 +19,7 @@ import AttributeGrammar
 import Lexer
 import Main
 import Monotone
+import ConstPropagation
 import Parser
 
 -- To make it all compile for the moment:

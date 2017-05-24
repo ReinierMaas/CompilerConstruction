@@ -25,6 +25,7 @@ executable mf
                        Dev
                        AttributeGrammar
                        Monotone
+                       ConstPropagation
   build-depends:       base,
                        containers,
                        text,
