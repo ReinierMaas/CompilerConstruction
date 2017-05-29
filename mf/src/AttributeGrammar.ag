@@ -245,11 +245,10 @@ sem Stat'
                    lhs.exitLabels = (@label, "false") : map (\b -> (b, "")) @stat.breaks
                    lhs.breaks = []
                    lhs.continues = []
-  | Call'          loc.label = @labelCall
-                   lhs.nodes = [(@label, @copy)]
-                   lhs.edges = let (i, o) = @lhs.procLabels Map.! @name in [(@label, i, ""), (o, @label, "")]
-                   lhs.entryLabel = @label
-                   lhs.exitLabels = single @label
+  | Call'          lhs.nodes = [(@labelCall, @copy), (@labelExit, @copy)]
+                   lhs.edges = let (i, o) = @lhs.procLabels Map.! @name in [(@labelCall, @labelExit, ""), (@labelCall, i, ""), (o, @labelExit, "")]
+                   lhs.entryLabel = @labelCall
+                   lhs.exitLabels = single @labelExit
   | IAssign'       lhs.nodes = [(@label, @copy)]
                    lhs.edges = []
                    lhs.entryLabel = @label

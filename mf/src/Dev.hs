@@ -37,10 +37,10 @@ ghci> run slv "fib"
 --}
 
 cp :: Gr ProcOrStat () -> Map Int (Maybe (Map String CP.Result), Maybe (Map String CP.Result))
-cp graph = mfp (nodes' graph) [999999] CP.extremalValue (edges graph) CP.transfer CP.merge
+cp graph = mfp M.empty (nodes' graph) [999999] CP.extremalValue (edges graph) CP.transfer CP.merge
 
 slv :: Gr ProcOrStat () -> Map Int (Maybe (Set String), Maybe (Set String))
-slv graph = mfp (nodes' graph) [999998] SLV.extremalValue (map swap (edges graph)) SLV.transfer SLV.merge
+slv graph = mfp M.empty (nodes' graph) [999998] SLV.extremalValue (map swap (edges graph)) SLV.transfer SLV.merge
 
 nodes' :: Gr ProcOrStat () -> Map Int Stat'
 nodes' graph = M.fromList $ mapMaybe (\(l, ps) -> (l,) <$> getStat ps) $ labNodes graph
