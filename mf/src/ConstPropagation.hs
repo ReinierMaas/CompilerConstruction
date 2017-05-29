@@ -26,10 +26,16 @@ merge = Map.unionWith mergeSingle
     mergeSingle x y | x == y = x
                     | otherwise = Top
 
-transfer :: Stat' -> Maybe (Map String Result) -> Maybe (Map String Result)
-transfer (IAssign' _ name val) (Just input) = Just $ Map.insert name (evalI input val) input
-transfer (BAssign' l name val) (Just input) = Just $ Map.insert name (evalB input val) input
+transfer :: [(Int, Int)] -> ProcOrStat -> Maybe (Map String Result) -> Maybe (Map String Result)
+transfer (S (Call' _ _ _ params out)) = Just $ Map.insert out (eval input (head params))
+transfer (S (IAssign' _ name val)) (Just input) = Just $ Map.insert name (evalI input val) input
+transfer (S (BAssign' _ name val)) (Just input) = Just $ Map.insert name (evalB input val) input
+transfer (S (Malloc' _ name size)) (Just input) = Just $ Map.insert name (evalI input size) input
 transfer _ input = input
+
+eval :: Map String Result -> Expr -> Result
+eval (I i) = evalI i
+eval (B b) = evalB b
 
 evalI :: Map String Result -> IExpr -> Result
 evalI input = eval

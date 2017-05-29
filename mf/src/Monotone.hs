@@ -4,13 +4,13 @@ import Control.Applicative ((<|>))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
-import AttributeGrammar (Stat')
+import AttributeGrammar (ProcOrStat)
 
 mergeStuff :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
 mergeStuff merge (Just x) (Just y) = Just $ merge x y
 mergeStuff _ x y = x <|> y
 
-mfp :: Eq a => Map Int Stat' -> [Int] -> a -> [(Int, Int)] -> (Stat' -> Maybe a -> Maybe a) -> (a -> a -> a) -> Map Int (Maybe a, Maybe a)
+mfp :: Eq a => Map Int ProcOrStat -> [Int] -> a -> [(Int, Int)] -> (ProcOrStat -> Maybe a -> Maybe a) -> (a -> a -> a) -> Map Int (Maybe a, Maybe a)
 mfp nodes extremalLabels extremalValue transitions transfer merge =
     let nothings = fmap (const Nothing) nodes
         justs = Map.fromList $ map (\l -> (l, Just extremalValue)) extremalLabels

@@ -42,8 +42,8 @@ cp graph = mfp (nodes' graph) [999999] CP.extremalValue (edges graph) CP.transfe
 slv :: Gr ProcOrStat () -> Map Int (Maybe (Set String), Maybe (Set String))
 slv graph = mfp (nodes' graph) [999998] SLV.extremalValue (map swap (edges graph)) SLV.transfer SLV.merge
 
-nodes' :: Gr ProcOrStat () -> Map Int Stat'
-nodes' graph = M.fromList $ mapMaybe (\(l, ps) -> (l,) <$> getStat ps) $ labNodes graph
+nodes' :: Gr ProcOrStat () -> Map Int ProcOrStat
+nodes' graph = M.fromList $ labNodes graph
 
 run :: String -> IO ()
 run = runAnalysis'
