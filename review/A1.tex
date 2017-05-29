@@ -1,0 +1,55 @@
+\documentclass{article}
+
+\usepackage{mathpartir}
+
+\author{
+	Reinier Maas \\ 4131495
+	\and
+	Adolfo Ochagavía \\ 4045483
+}
+\title{CCO - Assignment 1 grading}
+\begin{document}
+	
+	\maketitle
+	
+	% See docs on http://www.ccs.neu.edu/course/csg264/latex/mathpartir/mathpartir.pdf
+	
+	\section{Review of project by 4133935 and 4134524}
+	
+	\subsection{Building}
+	
+	Building was as simple as typing \texttt{stack build}.
+	
+	\subsection{Type system}
+	
+	The description of the type system is provided in the form of literate Agda code. It is surprisingly easy to follow! There are also deduction rules available, which make things even clearer. An extra feature provides let bindings for diagrams that can later be inserted by means of a use statement. Basic error reporting is implemented as well.
+	
+	\subsection{\LaTeX translation}
+	
+	Three examples of type-correct programs are provided, along with three examples of type-incorrect ones. The type-correct programs are flawlessly translated to \LaTeX. The same is also true for the diagrams provided in the assignment description. The type-incorrect ones generate an error, as expected.
+	
+	\subsection{Final grade}
+	
+	According to the guidelines, the basic requirements are clearly met: the programs compile and produce the expected results, the design of the type system is clearly explained. The additional feature of let bindings is implemented as well and works properly. Therefore, we give a \textbf{final grade of 10}.
+	
+	\section{Self-review of 4045483 and 4131495}
+	
+	\subsection{Building}
+	
+	Building was achieved simply by using the provided makefile.
+	
+	\subsection{Type system}
+	
+	The description of the type system is provided in the form of deduction rules. While the type system is a bit restrictive, it works well for all examples provided in the description of the assignment (and some extra examples we came up with). No extra features are implemented. Basic error reporting is implemented.
+	
+	A major issue with the type system is the ambiguity when choosing between the \texttt{ExecuteCompiling} and \texttt{ExecuteCompilingOnAnyPlatform}. This was caused by an oversight in our design and would probably have been catched by attempting to write a formal proof of correctness.
+	
+	\subsection{\LaTeX translation}
+	
+	The provided documentation includes the generated images for 11 diagrams. Translation seems to work flawlessly for type checked diagrams (and, of course, it doesn't when you remove the type-checking pass).
+	
+	\subsection{Final grade}
+	
+	According to the guidelines, the basic requirements are clearly met: the programs compile and produce the expected results, the design of the type system is formally explained. Because of the ambiguity issue with the type system we give a \textbf{final grade of 7.5}.
+	
+\end{document}
