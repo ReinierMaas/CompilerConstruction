@@ -5,7 +5,7 @@ module Dev where
 import Data.GraphViz (graphToDot, fmtNode, fmtEdge, nonClusteredParams)
 import Data.GraphViz.Attributes (toLabel)
 import Data.GraphViz.Printing (toDot, renderDot)
-import Data.Graph.Inductive.Graph
+import Data.Graph.Inductive.Graph hiding (Context)
 import Data.Graph.Inductive.Query.BFS (bfs)
 import qualified Data.Graph.Inductive.Graph as Graph
 import Data.Graph.Inductive.PatriciaTree
@@ -26,21 +26,11 @@ import qualified ConstPropagation as CP
 import qualified StronglyLiveVariables as SLV
 import Parser
 
--- To make it all compile for the moment:
-type Analysis a = [a]
+cp :: Gr ProcOrStat () -> Map Int ([(Context, Map String CP.Result)], [(Context, Map String CP.Result)])
+cp graph = mfp (nodes' graph) [999999] CP.extremalValue (edges graph) CP.embellishedTransfer CP.merge
 
-{-- How To Run (examples)
-
--- Strongly Live Variables
-ghci> run slv "fib"
-
---}
-
-cp :: Gr ProcOrStat () -> Map Int (Maybe (Map String CP.Result), Maybe (Map String CP.Result))
-cp graph = mfp M.empty (nodes' graph) [999999] CP.extremalValue (edges graph) CP.transfer CP.merge
-
-slv :: Gr ProcOrStat () -> Map Int (Maybe (Set String), Maybe (Set String))
-slv graph = mfp M.empty (nodes' graph) [999998] SLV.extremalValue (map swap (edges graph)) SLV.transfer SLV.merge
+--slv :: Gr ProcOrStat () -> Map Int (Maybe (Set String), Maybe (Set String))
+--slv graph = mfp (nodes' graph) [999998] SLV.extremalValue (map swap (edges graph)) SLV.transfer SLV.merge
 
 nodes' :: Gr ProcOrStat () -> Map Int Stat'
 nodes' graph = M.fromList $ mapMaybe (\(l, ps) -> (l,) <$> getStat ps) $ labNodes graph
@@ -72,21 +62,15 @@ runAnalysis' programName = do
     putStrLn $ renderGraph $ nmap show $ reachable 999999 cfg
     putStrLn ""
     putStrLn "CP ANALYSIS:"
-    let cpAnalysis = fmap (\(x, y) -> showJust x ++ "\n" ++ showJust y) $ cp $ emap (const ()) cfg
+    let cpAnalysis = fmap (\(x, y) -> show x ++ "\n" ++ show y) $ cp $ emap (const ()) cfg
     putStrLn $ renderAnalysis cpAnalysis (map fst extraNodes) extraEdges
     putStrLn ""
-    putStrLn "SLV ANALYSIS:"
-    let slvAnalysis = fmap (\(x, y) -> showJust' y ++ "\n" ++ showJust' x) $ slv $ emap (const ()) cfg
-    putStrLn $ renderAnalysis slvAnalysis (map fst extraNodes) extraEdges
-    putStrLn ""
+    --putStrLn "SLV ANALYSIS:"
+    --let slvAnalysis = fmap (\(x, y) -> showJust' y ++ "\n" ++ showJust' x) $ slv $ emap (const ()) cfg
+    --putStrLn $ renderAnalysis slvAnalysis (map fst extraNodes) extraEdges
+    --putStrLn ""
   else putStrLn $ "Errors: " ++ show errors
   putStrLn "THE END"
-
-showJust (Just x) = show $ M.toList x
-showJust (Nothing) = "-"
-
-showJust' (Just x) = show $ S.toList x
-showJust' (Nothing) = "-"
 
 renderGraph :: Gr String String -> String
 renderGraph g = let dot = graphToDot params g

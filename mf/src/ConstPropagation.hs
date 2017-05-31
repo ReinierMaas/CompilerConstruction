@@ -2,12 +2,14 @@ module ConstPropagation (
     extremalValue,
     merge,
     transfer,
+    embellishedTransfer,
     Result(..)
 ) where
 
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import Monotone (Context)
 
 import AttributeGrammar
 
@@ -26,9 +28,16 @@ merge = Map.unionWith mergeSingle
     mergeSingle x y | x == y = x
                     | otherwise = Top
 
-transfer :: Stat' -> Maybe (Map String Result) -> Maybe (Map String Result)
-transfer (IAssign' _ name val) (Just input) = Just $ Map.insert name (evalI input val) input
-transfer (BAssign' l name val) (Just input) = Just $ Map.insert name (evalB input val) input
+embellishedTransfer :: Stat' -> [(Context, Map String Result)] -> [(Context, Map String Result)]
+embellishedTransfer (Call' _ _ _ _ _) = undefined
+embellishedTransfer x = lift $ transfer x
+    where
+    lift :: (Map String Result -> Map String Result) -> [(Context, Map String Result)] -> [(Context, Map String Result)]
+    lift f = map (\(ctx, m) -> (ctx, f m))
+
+transfer :: Stat' -> Map String Result -> Map String Result
+transfer (IAssign' _ name val) input = Map.insert name (evalI input val) input
+transfer (BAssign' l name val) input = Map.insert name (evalB input val) input
 transfer _ input = input
 
 evalI :: Map String Result -> IExpr -> Result

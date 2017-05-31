@@ -6,14 +6,17 @@ import qualified Data.Map.Strict as Map
 
 import AttributeGrammar (Stat')
 
-mergeStuff :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
-mergeStuff merge (Just x) (Just y) = Just $ merge x y
-mergeStuff _ x y = x <|> y
+type Context = ()
 
-mfp :: Eq a => Map String (Int, Int) -> Map Int Stat' -> [Int] -> a -> [(Int, Int)] -> (Stat' -> Maybe a -> Maybe a) -> (a -> a -> a) -> Map Int (Maybe a, Maybe a)
-mfp procs nodes extremalLabels extremalValue transitions transfer merge =
-    let nothings = fmap (const Nothing) nodes
-        justs = Map.fromList $ map (\l -> (l, Just extremalValue)) extremalLabels
+emptyContext = undefined
+
+mergeStuff :: (a -> a -> a) -> [(Context, a)] -> [(Context, a)] -> [(Context, a)]
+mergeStuff merge xs ys = undefined
+
+mfp :: Eq a => Map Int Stat' -> [Int] -> a -> [(Int, Int)] -> (Stat' -> [(Context, a)] -> [(Context, a)]) -> (a -> a -> a) -> Map Int ([(Context, a)], [(Context, a)])
+mfp nodes extremalLabels extremalValue transitions transfer merge =
+    let nothings = fmap (const []) nodes
+        justs = Map.fromList $ map (\l -> (l, [(emptyContext, extremalValue)])) extremalLabels
         a = justs `Map.union` nothings -- Note: in case of duplicated keys, justs is preferred
         openMfp = fixpoint a transitions
     in  Map.mapWithKey (\l v -> (v, transfer (nodes Map.! l) v)) openMfp
