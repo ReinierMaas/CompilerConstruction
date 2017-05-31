@@ -1,7 +1,8 @@
 module ConstPropagation (
     extremalValue,
     merge,
-    transfer,
+    unaryTransfer,
+    binaryTransfer,
     Result(..)
 ) where
 
@@ -27,16 +28,30 @@ merge = Map.unionWith mergeSingle
     mergeSingle x y | x == y = x
                     | otherwise = Top
 
-transfer :: ProcOrStat -> [(Context, Map String Result)] -> [(Context, Map String Result)]
-transfer (P p) = transferProc p
-transfer (S s) = transferStat s
+unaryTransfer :: ProcOrStat -> [(Context, Map String Result)] -> [(Context, Map String Result)]
+unaryTransfer (P _) = id
+unaryTransfer (S s) = transferStat s
 
-transferProc :: Proc' -> [(Context, Map String Result)] -> [(Context, Map String Result)]
-transferProc (Proc' entry ret name inp out stat) = id
+binaryTransfer :: (Int, Int) -> Map Int ProcOrStat -> Map Int [(Context, Map String Result)] -> [(Context, Map String Result)] -> [(Context, Map String Result)]
+binaryTransfer (l, l') nodes analysis = case nodes Map.! l of
+    (P p@(Proc' _ exit _ _ _ _)) -> if exit == l
+                                    then let call = nodes Map.! l'
+                                             a = analysis Map.! (getCallLabel call)
+                                         in  transferProc p a
+                                    else id
+    (S s)                        -> transferStat s
+    where
+    getCallLabel :: ProcOrStat -> Int
+    getCallLabel (S (Call' call _ _ _ _)) = call
+    getCallLabel x = error $ "Called getCallLabel with wrong parameter: " ++ show x
+
+-- Only called for edges between a proc exit node and a call end node
+transferProc :: Proc' -> [(Context, Map String Result)] -> [(Context, Map String Result)] -> [(Context, Map String Result)]
+transferProc (Proc' entry ret name inp out stat) callAnalysis = id
 
 transferStat :: Stat' -> [(Context, Map String Result)] -> [(Context, Map String Result)]
-transferStat (Call' _ _ _ _ _) = id
-transferStat x = lift $ transferStat' x
+transferStat (Call' call exit name inp out) input = undefined
+transferStat x input = lift (transferStat' x) input
     where
     lift :: (Map String Result -> Map String Result) -> [(Context, Map String Result)] -> [(Context, Map String Result)]
     lift f = map (\(ctx, m) -> (ctx, f m))

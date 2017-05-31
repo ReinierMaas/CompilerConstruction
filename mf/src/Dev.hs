@@ -27,7 +27,7 @@ import qualified StronglyLiveVariables as SLV
 import Parser
 
 cp :: Gr ProcOrStat () -> Map Int ([(Context, Map String CP.Result)], [(Context, Map String CP.Result)])
-cp graph = mfp (nodes' graph) [999999] CP.extremalValue (edges graph) CP.transfer CP.merge
+cp graph = mfp (nodes' graph) [999999] CP.extremalValue (edges graph) CP.unaryTransfer CP.binaryTransfer CP.merge
 
 --slv :: Gr ProcOrStat () -> Map Int (Maybe (Set String), Maybe (Set String))
 --slv graph = mfp (nodes' graph) [999998] SLV.extremalValue (map swap (edges graph)) SLV.transfer SLV.merge
