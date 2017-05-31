@@ -6,9 +6,11 @@ import qualified Data.Map.Strict as Map
 
 import AttributeGrammar (Stat')
 
-type Context = ()
+type Context = [Int]
 
-emptyContext = undefined
+emptyContext = []
+
+maxContextDepth = 1 -- 0 no context, 1 callsite information, 2 two levels callsite information, ...
 
 mergeStuff :: (a -> a -> a) -> [(Context, a)] -> [(Context, a)] -> [(Context, a)]
 mergeStuff merge xs ys = undefined
