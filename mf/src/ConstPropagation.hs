@@ -2,7 +2,6 @@ module ConstPropagation (
     extremalValue,
     merge,
     transfer,
-    embellishedTransfer,
     Result(..)
 ) where
 
@@ -28,17 +27,24 @@ merge = Map.unionWith mergeSingle
     mergeSingle x y | x == y = x
                     | otherwise = Top
 
-embellishedTransfer :: Stat' -> [(Context, Map String Result)] -> [(Context, Map String Result)]
-embellishedTransfer (Call' _ _ _ _ _) = undefined
-embellishedTransfer x = lift $ transfer x
+transfer :: ProcOrStat -> [(Context, Map String Result)] -> [(Context, Map String Result)]
+transfer (P p) = transferProc p
+transfer (S s) = transferStat s
+
+transferProc :: Proc' -> [(Context, Map String Result)] -> [(Context, Map String Result)]
+transferProc (Proc' entry ret name inp out stat) = id
+
+transferStat :: Stat' -> [(Context, Map String Result)] -> [(Context, Map String Result)]
+transferStat (Call' _ _ _ _ _) = id
+transferStat x = lift $ transferStat' x
     where
     lift :: (Map String Result -> Map String Result) -> [(Context, Map String Result)] -> [(Context, Map String Result)]
     lift f = map (\(ctx, m) -> (ctx, f m))
 
-transfer :: Stat' -> Map String Result -> Map String Result
-transfer (IAssign' _ name val) input = Map.insert name (evalI input val) input
-transfer (BAssign' l name val) input = Map.insert name (evalB input val) input
-transfer _ input = input
+transferStat' :: Stat' -> Map String Result -> Map String Result
+transferStat' (IAssign' _ name val) input = Map.insert name (evalI input val) input
+transferStat' (BAssign' l name val) input = Map.insert name (evalB input val) input
+transferStat' _ input = input
 
 evalI :: Map String Result -> IExpr -> Result
 evalI input = eval

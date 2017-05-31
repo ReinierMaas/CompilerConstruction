@@ -4,7 +4,7 @@ import Control.Applicative ((<|>))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
-import AttributeGrammar (Stat')
+import AttributeGrammar (ProcOrStat)
 
 type Context = [Int]
 
@@ -15,7 +15,7 @@ maxContextDepth = 1 -- 0 no context, 1 callsite information, 2 two levels callsi
 mergeStuff :: (a -> a -> a) -> [(Context, a)] -> [(Context, a)] -> [(Context, a)]
 mergeStuff merge xs ys = undefined
 
-mfp :: Eq a => Map Int Stat' -> [Int] -> a -> [(Int, Int)] -> (Stat' -> [(Context, a)] -> [(Context, a)]) -> (a -> a -> a) -> Map Int ([(Context, a)], [(Context, a)])
+mfp :: Eq a => Map Int ProcOrStat -> [Int] -> a -> [(Int, Int)] -> (ProcOrStat -> [(Context, a)] -> [(Context, a)]) -> (a -> a -> a) -> Map Int ([(Context, a)], [(Context, a)])
 mfp nodes extremalLabels extremalValue transitions transfer merge =
     let nothings = fmap (const []) nodes
         justs = Map.fromList $ map (\l -> (l, [(emptyContext, extremalValue)])) extremalLabels

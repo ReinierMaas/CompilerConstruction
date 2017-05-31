@@ -27,13 +27,13 @@ import qualified StronglyLiveVariables as SLV
 import Parser
 
 cp :: Gr ProcOrStat () -> Map Int ([(Context, Map String CP.Result)], [(Context, Map String CP.Result)])
-cp graph = mfp (nodes' graph) [999999] CP.extremalValue (edges graph) CP.embellishedTransfer CP.merge
+cp graph = mfp (nodes' graph) [999999] CP.extremalValue (edges graph) CP.transfer CP.merge
 
 --slv :: Gr ProcOrStat () -> Map Int (Maybe (Set String), Maybe (Set String))
 --slv graph = mfp (nodes' graph) [999998] SLV.extremalValue (map swap (edges graph)) SLV.transfer SLV.merge
 
-nodes' :: Gr ProcOrStat () -> Map Int Stat'
-nodes' graph = M.fromList $ mapMaybe (\(l, ps) -> (l,) <$> getStat ps) $ labNodes graph
+nodes' :: Gr ProcOrStat () -> Map Int ProcOrStat
+nodes' = M.fromList . labNodes
 
 run :: String -> IO ()
 run = runAnalysis'
