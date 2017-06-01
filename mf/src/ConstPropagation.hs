@@ -45,7 +45,9 @@ binaryTransfer (l, l') nodes analysis = case nodes Map.! l of
     (S s@(Call' lc lc' name _ _))   -> let p = getProc $ head $ filter (isProc name) $ map snd $ Map.toList nodes in
                                        if l == lc && l' == lc'
                                        then transferProc p s (analysis Map.! lc)
-                                       else transferStat s $ getProc $ head $ filter (isProc name) $ map snd $ Map.toList nodes
+                                       else if l == lc'
+                                            then id
+                                            else transferStat s $ getProc $ head $ filter (isProc name) $ map snd $ Map.toList nodes
     (S s)                           -> transferStat s undefined
     where
     getCallLabel :: ProcOrStat -> Int
