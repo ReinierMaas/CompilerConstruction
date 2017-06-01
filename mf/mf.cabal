@@ -25,6 +25,7 @@ executable mf
                        AttributeGrammar
                        Monotone
                        ConstPropagation
+                       StronglyLiveVariables
   build-depends:       base,
                        containers,
                        text,
@@ -33,3 +34,4 @@ executable mf
                        fgl == 5.5.3.1,
                        graphviz
   hs-source-dirs:      src
+  extensions:          DoAndIfThenElse

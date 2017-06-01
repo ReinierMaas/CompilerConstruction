@@ -1,0 +1,88 @@
+\documentclass{article}
+
+\usepackage{hyperref}
+
+\author{
+  Reinier Maas \\ 4131495
+  \and
+  Adolfo Ochagavía \\ 4045483
+}
+\title{CCO - Assignment 2}
+\begin{document}
+
+\maketitle
+
+\section*{Modules}
+
+\begin{itemize}
+\item \texttt{Lexer and Parser}: we got them for free and there are no relevant modifications.
+\item \texttt{Monotone}: implements the \texttt{mfp} function
+\item \texttt{AttributeGrammar}: enhanced
+\item \texttt{ConstPropagation}: const propagation analysis on top of mfp
+\item \texttt{StronglyLiveVariables}: strongly live variable analysis on top of mfp
+\item \texttt{ConstPropagation}: const propagation analysis on top of mfp
+\item \texttt{Main}: command-line utility to run the assignments
+\end{itemize}
+
+\section*{Building and running}
+
+Provided you have \texttt{stack} and \texttt{uuagc} installed on your system, you can use \texttt{make} to build the project. The project should probably build as well when using cabal, though we haven't tested it. Below we explain how to actually run our code.
+
+\subsubsection*{As a CLI tool}
+
+After compiling the executable, you can run it and will see the following message:
+
+\begin{verbatim}
+Usage:
+mf <max-context-depth> <file>
+\end{verbatim}
+
+This means that you should run the program specifying the max length of the context string and the relative path to the file you would like to analyze. For instance, if your working directory is the root of the project, you could try the following: \texttt{mf 2 examples/cp1.c}.
+
+The results of the program are printed as a graph, specified in the DOT language. Each analysis produces its own graph. As you may already know, you can use GraphViz to actually get an image of the graph (or you can use \href{http://www.webgraphviz.com/}{this online version}).
+
+Each time you run the program, the Constant Propagation and Strongly Live Variables analysis will be run. Note that the latter is intraprocedural, so it will not be affected by changes to the \texttt{max-context-depth} parameter. An excerpt of the output is shown below:
+
+\begin{verbatim}
+CP ANALYSIS:
+digraph {
+// Content replaced by this comment because of its length
+}
+
+SLV ANALYSIS:
+digraph {
+// Content replaced by this comment because of its length
+}
+\end{verbatim}
+
+\subsubsection*{From GHCi}
+
+Running the program from GHCi is almost the same as through the CLI application. While in the command line you need to execute \texttt{mf 2 examples/cp1.c}, in GHCi it is enough to write \texttt{run 2 "examples/cp1.c"}. In fact, the CLI is just a wrapper around the \texttt{run} function.
+
+\section*{Features and assumptions}
+
+Assumption: no global variables.
+
+\subsection*{Attribute Grammar}
+
+What did we do here?
+
+\subsection*{MFP implementation}
+
+\subsection*{Constant Propagation}
+
+Interprocedural
+
+How are the transfer functions defined?
+
+Walkthrough
+
+\subsection*{Strongly Live Variables}
+
+Note: only intraprocedural
+
+How are the transfer functions defined?
+
+Walkthrough
+
+\end{document}

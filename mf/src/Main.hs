@@ -37,10 +37,10 @@ main = do
     args <- parseArgsOrExit usage =<< getArgs
     maxDepth <- args `getArgOrExit` (argument "max-context-depth")
     file <- args `getArgOrExit` (argument "file")
-    run file (read maxDepth)
+    run (read maxDepth) file
 
-run :: String -> Int -> IO ()
-run path maxDepth = do
+run :: Int -> String -> IO ()
+run maxDepth path = do
     p <- happy . alex <$> readFile path
     let (freshLabel, t) = sem_Program p 0
     let (startLabel, finishLabel) = (freshLabel, freshLabel + 1)
@@ -49,7 +49,8 @@ run path maxDepth = do
     let extraEdges = (startLabel, entryPoint, "") : map (\el -> (el, finishLabel, "")) exitLabels ++ edges
     let cfg = mkGraph extraNodes extraEdges :: Gr ProcOrStat String
     let nodeMap = M.fromList extraNodes
-    if null errors then do
+    if null errors
+    then do
         putStrLn "CP ANALYSIS:"
         let cpAnalysis = fmap (\(x, y) -> (show x, show y)) (CP.runAnalysis maxDepth (emap (const ()) cfg) startLabel)
         putStrLn $ renderAnalysis cpAnalysis nodeMap (map fst extraNodes) extraEdges

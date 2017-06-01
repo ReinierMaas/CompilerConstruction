@@ -1,6 +1,7 @@
 default: all
 
 all: src/Lexer.hs src/Parser.hs src/AttributeGrammar.hs
+	stack build
 
 #----------------------------
 
