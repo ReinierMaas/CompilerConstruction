@@ -1,22 +1,14 @@
-{-# LANGUAGE TupleSections #-}
-
 module Dev where
 
 import Data.GraphViz (graphToDot, fmtNode, fmtEdge, nonClusteredParams)
 import Data.GraphViz.Attributes (toLabel)
 import Data.GraphViz.Printing (toDot, renderDot)
 import Data.Graph.Inductive.Graph hiding (Context)
-import Data.Graph.Inductive.Query.BFS (bfs)
 import qualified Data.Graph.Inductive.Graph as Graph
 import Data.Graph.Inductive.PatriciaTree
 import Data.Text.Lazy (unpack)
-import Data.Maybe (mapMaybe)
-import Data.Set (Set)
-import qualified Data.Set as S
 import Data.Map (Map)
 import qualified Data.Map as M
-import qualified Data.List as L
-import Data.Tuple (swap)
 
 import AttributeGrammar
 import Lexer
@@ -26,14 +18,7 @@ import qualified ConstPropagation as CP
 import qualified StronglyLiveVariables as SLV
 import Parser
 
-cp :: Gr ProcOrStat () -> Map Int ([(Context, Map String CP.Result)], [(Context, Map String CP.Result)])
-cp graph = mfp (nodes' graph) [999999] CP.extremalValue (edges graph) CP.unaryTransfer CP.binaryTransfer CP.merge
-
-slv :: Gr ProcOrStat () -> Map Int ([(Context, Set String)], [(Context, Set String)])
-slv graph = mfp (nodes' graph) [999998] SLV.extremalValue (map swap (edges graph)) SLV.unaryTransfer SLV.binaryTransfer SLV.merge
-
-nodes' :: Gr ProcOrStat () -> Map Int ProcOrStat
-nodes' = M.fromList . labNodes
+maxContextDepth = 2 -- 0 no context, 1 callsite information, 2 two levels callsite information, ...
 
 run :: String -> IO ()
 run = runAnalysis'
@@ -42,59 +27,48 @@ run = runAnalysis'
 runAnalysis' :: String -> IO ()
 runAnalysis' programName = do
   p <- parse programName
-  let t = snd $ (sem_Program p) 0
+  let (freshLabel, t) = sem_Program p 0
+  let (startLabel, finishLabel) = (freshLabel, freshLabel + 1)
   let (edges, entryPoint, errors, exitLabels, nodes, _) = sem_Program' t
-  let extraNodes = (999999, S (Skip' 999999)) : (999998, S (Skip' 999998)) : nodes
-  let extraEdges = (999999, entryPoint, "") : map (\el -> (el, 999998, "")) exitLabels ++ edges
+  let extraNodes = (startLabel, S (Skip' startLabel)) : (finishLabel, S (Skip' finishLabel)) : nodes
+  let extraEdges = (startLabel, entryPoint, "") : map (\el -> (el, finishLabel, "")) exitLabels ++ edges
   let cfg = mkGraph extraNodes extraEdges :: Gr ProcOrStat String
+  let nodeMap = M.fromList extraNodes
 
-  putStrLn "PARSED INPUT:"
-  putStrLn (show p)
-  putStrLn ""
-  putStrLn "LABELLED INPUT:"
-  putStrLn (show t)
-  putStrLn ""
   if null errors then do
     putStrLn "CFG:"
     putStrLn $ renderGraph $ nmap show cfg
     putStrLn ""
-    putStrLn "REACHABLE CFG:"
-    putStrLn $ renderGraph $ nmap show $ reachable 999999 cfg
-    putStrLn ""
     putStrLn "CP ANALYSIS:"
-    let cpAnalysis = fmap (\(x, y) -> show x ++ "\n" ++ show y) $ cp $ emap (const ()) cfg
-    putStrLn $ renderAnalysis cpAnalysis (map fst extraNodes) extraEdges
+    let cpAnalysis = fmap (\(x, y) -> (show x, show y)) (CP.runAnalysis (emap (const ()) cfg) startLabel maxContextDepth)
+    putStrLn $ renderAnalysis cpAnalysis nodeMap (map fst extraNodes) extraEdges
     putStrLn ""
     putStrLn "SLV ANALYSIS:"
-    let slvAnalysis = fmap (\(x, y) -> show y ++ "\n" ++ show x) $ slv $ emap (const ()) cfg
-    putStrLn $ renderAnalysis slvAnalysis (map fst extraNodes) extraEdges
+    let slvAnalysis = fmap (\(x, y) -> (show y, show x)) $ (SLV.runAnalysis (emap (const ()) cfg) finishLabel)
+    putStrLn $ renderAnalysis slvAnalysis nodeMap (map fst extraNodes) extraEdges
     putStrLn ""
   else putStrLn $ "Errors: " ++ show errors
-  putStrLn "THE END"
 
 renderGraph :: Gr String String -> String
-renderGraph g = let dot = graphToDot params g
-                    code = renderDot $ toDot dot
-                in  unpack code
+renderGraph g = unpack $ renderDot $ toDot $ graphToDot params g
   where
   params = nonClusteredParams { fmtNode = fn, fmtEdge = fe }
   fn (_, l) = [toLabel l]
   fe (_, _, l) = [toLabel l]
 
-renderAnalysis :: Map Int String -> [Int] -> [(Int, Int, String)] -> String
-renderAnalysis analysis nodes edges =
-  let anNodes = map (\l -> (l, analysis M.! l)) nodes
+-- Transforms the analysis results in a graph where each node shows the results of the analysis,
+-- as well as the statement or procedure in question
+renderAnalysis :: Map Int (String, String) -> Map Int ProcOrStat -> [Int] -> [(Int, Int, String)] -> String
+renderAnalysis analysis realNodes nodes edges =
+  let anNodes = map renderNode nodes
       graph = mkGraph anNodes edges
   in  renderGraph graph
-
--- Removes unreachable nodes from the graph.
--- We select all nodes that are reachable from the entry point and discard anything else.
-reachable :: Int -> Gr a b -> Gr a b
-reachable entryPoint g = let reachableNodes = bfs entryPoint g
-                         in  subgraph reachableNodes g
+  where
+  renderNode label = let (open, closed) = analysis M.! label
+                         procOrStat = show $ realNodes M.! label
+                     in  (label, unlines [open, procOrStat, closed])
 
 -- parse program
-
 parse :: String -> IO Program
 parse programName = do
   let fileName = "../examples/"++programName++".c"

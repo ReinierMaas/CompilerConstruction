@@ -10,8 +10,6 @@ type Context = [Int]
 
 emptyContext = []
 
-maxContextDepth = 1 -- 0 no context, 1 callsite information, 2 two levels callsite information, ...
-
 mergeStuff :: (a -> a -> a) -> [(Context, a)] -> [(Context, a)] -> [(Context, a)]
 mergeStuff merge xs ys = Map.toList $ Map.unionWith merge (Map.fromList xs) (Map.fromList ys)
 

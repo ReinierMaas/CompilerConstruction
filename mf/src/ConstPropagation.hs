@@ -1,24 +1,28 @@
 module ConstPropagation (
-    extremalValue,
-    merge,
-    unaryTransfer,
-    binaryTransfer,
+    runAnalysis,
     Result(..)
 ) where
 
+import Data.Graph.Inductive.Graph (labNodes, edges)
+import Data.Graph.Inductive.PatriciaTree (Gr)
 import Data.List (find)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, fromMaybe)
-import Monotone (Context, liftTransfer)
+import Monotone (Context, liftTransfer, mfp)
 
 import AttributeGrammar
+
+-- The Const Propagation analysis
+runAnalysis :: Gr ProcOrStat () -> Int -> Int -> Map Int ([(Context, Map String Result)], [(Context, Map String Result)])
+runAnalysis graph entryLabel maxDepth = mfp (Map.fromList (labNodes graph)) [entryLabel] extremalValue (edges graph) unaryTransfer (binaryTransfer maxDepth) merge
 
 data Result = Top
             | Nat Int
             | Bool Bool
             deriving (Eq, Show)
 
+-- Internal functions
 extremalValue :: Map String Result
 extremalValue = Map.empty
 
@@ -34,19 +38,19 @@ unaryTransfer (P _) = id
 unaryTransfer (S (Call' _ _ _ _ _)) = id
 unaryTransfer (S s) = transferStat s
 
-binaryTransfer :: (Int, Int) -> Map Int ProcOrStat -> Map Int [(Context, Map String Result)] -> [(Context, Map String Result)] -> [(Context, Map String Result)]
-binaryTransfer (l, l') nodes analysis = case nodes Map.! l of
+binaryTransfer :: Int -> (Int, Int) -> Map Int ProcOrStat -> Map Int [(Context, Map String Result)] -> [(Context, Map String Result)] -> [(Context, Map String Result)]
+binaryTransfer maxDepth (l, l') nodes analysis = case nodes Map.! l of
     (P p@(Proc' _ exit _ _ _ _))    -> if exit == l
                                        then let call = nodes Map.! l'
                                                 a = analysis Map.! (getCallLabel call)
-                                            in  transferProc p (getStat call) a
+                                            in  transferProc maxDepth p (getStat call) a
                                        else id
     (S s@(Call' lc lc' name _ _))   -> let p = getProc $ head $ filter (isProc name) $ map snd $ Map.toList nodes in
                                        if l == lc && l' == lc'
-                                       then transferProc p s (analysis Map.! lc)
+                                       then transferProc maxDepth p s (analysis Map.! lc)
                                        else if l == lc'
                                             then id
-                                            else transferCall s $ getProc $ fromJust $ find (isProc name) $ map snd $ Map.toList nodes
+                                            else transferCall maxDepth s $ getProc $ fromJust $ find (isProc name) $ map snd $ Map.toList nodes
     (S s)                           -> transferStat s
     where
     getCallLabel :: ProcOrStat -> Int
@@ -65,17 +69,16 @@ binaryTransfer (l, l') nodes analysis = case nodes Map.! l of
     isProc name (P (Proc' _ _ nameProc _ _ _)) = name == nameProc
     isProc _ _ = False
 
-maxContextDepth = 2 -- 0 no context, 1 callsite information, 2 two levels callsite information, ...
-newContext :: Int -> Context -> Context
-newContext callLabel ctx = take maxContextDepth (callLabel : ctx)
+newContext :: Int -> Int -> Context -> Context
+newContext maxDepth callLabel ctx = take maxDepth (callLabel : ctx)
 
 -- Only called for edges between a proc exit node and a call end node
-transferProc :: Proc' -> Stat' -> [(Context, Map String Result)] -> [(Context, Map String Result)] -> [(Context, Map String Result)]
-transferProc (Proc' entryLabel returnLabel nameProc inputs result _) (Call' callLabel exitLabel nameCall params output) callAnalysis input
+transferProc :: Int -> Proc' -> Stat' -> [(Context, Map String Result)] -> [(Context, Map String Result)] -> [(Context, Map String Result)]
+transferProc maxDepth (Proc' entryLabel returnLabel nameProc inputs result _) (Call' callLabel exitLabel nameCall params output) callAnalysis input
     = map (\(ctx, val) -> (ctx, combine (returnResult ctx) val)) callAnalysis
     where
     returnResult :: Context -> Maybe Result
-    returnResult ctx = Map.lookup (newContext callLabel ctx) (Map.fromList input) >>= Map.lookup result
+    returnResult ctx = Map.lookup (newContext maxDepth callLabel ctx) (Map.fromList input) >>= Map.lookup result
     combine :: Maybe Result -> Map String Result -> Map String Result
     combine (Just ret) = Map.insert output ret
     combine Nothing = Map.delete result
@@ -84,22 +87,22 @@ transferProc (Proc' entryLabel returnLabel nameProc inputs result _) (Call' call
     isInit (x:xs) (y:ys) = x == y && isInit xs ys
 
 -- Only called for calls with the corresponding procedure provided
-transferCall :: Stat' -> Proc' -> [(Context, Map String Result)] -> [(Context, Map String Result)]
-transferCall (Call' callLabel exitLabel nameCall params output) (Proc' entryLabel returnLabel nameProc inputs result _) input
-    = Map.toList $ Map.fromListWith merge $ map (\(ctx, vals) -> (newContext callLabel ctx, valsToInput vals)) input
+transferCall :: Int -> Stat' -> Proc' -> [(Context, Map String Result)] -> [(Context, Map String Result)]
+transferCall maxDepth (Call' callLabel exitLabel nameCall params output) (Proc' entryLabel returnLabel nameProc inputs result _) input
+    = Map.toList $ Map.fromListWith merge $ map (\(ctx, vals) -> (newContext maxDepth callLabel ctx, valsToInput vals)) input
     where
     valsToInput :: Map String Result -> Map String Result
     valsToInput vals = Map.fromList $ map (\(i, p) -> (i, eval vals p)) (zip inputs params)
-transferCall _ _ _ = error "Called transferCall without a Call"
+transferCall _ _ _ _ = error "Called transferCall without a Call"
 
 transferStat :: Stat' -> [(Context, Map String Result)] -> [(Context, Map String Result)]
 transferStat (Call' _ _ _ _ _) _ = error "Called transferStat with a Call"
 transferStat s input = liftTransfer (transferStat' s) input
-
-transferStat' :: Stat' -> Map String Result -> Map String Result
-transferStat' (IAssign' _ name val) input = Map.insert name (evalI input val) input
-transferStat' (BAssign' l name val) input = Map.insert name (evalB input val) input
-transferStat' _ input = input
+    where
+    transferStat' :: Stat' -> Map String Result -> Map String Result
+    transferStat' (IAssign' _ name val) input = Map.insert name (evalI input val) input
+    transferStat' (BAssign' l name val) input = Map.insert name (evalB input val) input
+    transferStat' _ input = input
 
 eval :: Map String Result -> Expr -> Result
 eval input (I i) = evalI input i

@@ -1,19 +1,24 @@
 module StronglyLiveVariables (
-    extremalValue,
-    merge,
-    unaryTransfer,
-    binaryTransfer
+    runAnalysis
 ) where
 
+import Data.Graph.Inductive.Graph (labNodes, edges)
+import Data.Graph.Inductive.PatriciaTree (Gr)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import Data.Tuple (swap)
 
 import AttributeGrammar
-import Monotone (Context, liftTransfer)
+import Monotone (Context, liftTransfer, mfp)
 
+-- Dinges
+runAnalysis :: Gr ProcOrStat () -> Int -> Map Int ([(Context, Set String)], [(Context, Set String)])
+runAnalysis graph entryLabel = mfp (Map.fromList (labNodes graph)) [entryLabel] extremalValue (map swap (edges graph)) unaryTransfer binaryTransfer merge
+
+-- Internal functions
 extremalValue :: Set String
 extremalValue = Set.empty
 
