@@ -14,8 +14,8 @@ import Monotone (Context, liftTransfer, mfp)
 import AttributeGrammar
 
 -- The Const Propagation analysis
-runAnalysis :: Gr ProcOrStat () -> Int -> Int -> Map Int ([(Context, Map String Result)], [(Context, Map String Result)])
-runAnalysis graph entryLabel maxDepth = mfp (Map.fromList (labNodes graph)) [entryLabel] extremalValue (edges graph) unaryTransfer (binaryTransfer maxDepth) merge
+runAnalysis :: Int -> Gr ProcOrStat () -> Int ->Map Int ([(Context, Map String Result)], [(Context, Map String Result)])
+runAnalysis maxDepth graph entryLabel = mfp (Map.fromList (labNodes graph)) [entryLabel] extremalValue (edges graph) unaryTransfer (binaryTransfer maxDepth) merge
 
 data Result = Top
             | Nat Int

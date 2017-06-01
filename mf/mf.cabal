@@ -22,7 +22,6 @@ executable mf
   main-is:             Main.hs
   other-modules:       Lexer
                        Parser
-                       Dev
                        AttributeGrammar
                        Monotone
                        ConstPropagation
@@ -30,6 +29,7 @@ executable mf
                        containers,
                        text,
                        array,
+                       docopt == 0.7.0.5,
                        fgl == 5.5.3.1,
                        graphviz
   hs-source-dirs:      src
