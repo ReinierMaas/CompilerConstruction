@@ -6,8 +6,6 @@ module ConstPropagation (
     Result(..)
 ) where
 
-import Debug.Trace (traceShow, traceShowId)
-
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -66,7 +64,7 @@ binaryTransfer (l, l') nodes analysis = case nodes Map.! l of
     isProc name (P (Proc' _ _ nameProc _ _ _)) = name == nameProc
     isProc _ _ = False
 
-maxContextDepth = 1 -- 0 no context, 1 callsite information, 2 two levels callsite information, ...
+maxContextDepth = 2 -- 0 no context, 1 callsite information, 2 two levels callsite information, ...
 newContext :: Int -> Context -> Context
 newContext callLabel ctx = take maxContextDepth (callLabel:ctx)
 
@@ -76,7 +74,7 @@ transferProc (Proc' entryLabel returnLabel nameProc inputs result _) (Call' call
     = map (\(ctx, val) -> (ctx, combine (returnResult ctx) val)) callAnalysis
     where
     returnResult :: Context -> Maybe Result
-    returnResult ctx = (traceShowId $ traceShow output $ Map.lookup (newContext callLabel ctx) (Map.fromList input)) >>= Map.lookup result
+    returnResult ctx = Map.lookup (newContext callLabel ctx) (Map.fromList input) >>= Map.lookup result
     combine :: Maybe Result -> Map String Result -> Map String Result
     combine (Just ret) = Map.insert output ret
     combine Nothing = Map.delete result
