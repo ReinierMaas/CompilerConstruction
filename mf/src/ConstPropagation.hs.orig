@@ -6,11 +6,16 @@ module ConstPropagation (
     Result(..)
 ) where
 
+<<<<<<< cabd9bbba8a94ddcb1f0534e81dbc8611d14c5fe
+=======
+import Debug.Trace (traceShow, traceShowId)
+
 import Data.List (find)
+>>>>>>> Cleanup
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, fromMaybe)
-import Monotone (Context, liftTransfer)
+import Monotone (Context)
 
 import AttributeGrammar
 
@@ -44,10 +49,15 @@ binaryTransfer (l, l') nodes analysis = case nodes Map.! l of
     (S s@(Call' lc lc' name _ _))   -> let p = getProc $ head $ filter (isProc name) $ map snd $ Map.toList nodes in
                                        if l == lc && l' == lc'
                                        then transferProc p s (analysis Map.! lc)
+<<<<<<< cabd9bbba8a94ddcb1f0534e81dbc8611d14c5fe
                                        else if l == lc'
                                             then id
-                                            else transferCall s $ getProc $ fromJust $ find (isProc name) $ map snd $ Map.toList nodes
+                                            else transferStat s $ getProc $ head $ filter (isProc name) $ map snd $ Map.toList nodes
+    (S s)                           -> transferStat s undefined
+=======
+                                       else transferCall s $ getProc $ fromJust $ find (isProc name) $ map snd $ Map.toList nodes
     (S s)                           -> transferStat s
+>>>>>>> Cleanup
     where
     getCallLabel :: ProcOrStat -> Int
     getCallLabel (S (Call' call _ _ _ _)) = call
@@ -94,7 +104,10 @@ transferCall _ _ _ = error "Called transferCall without a Call"
 
 transferStat :: Stat' -> [(Context, Map String Result)] -> [(Context, Map String Result)]
 transferStat (Call' _ _ _ _ _) _ = error "Called transferStat with a Call"
-transferStat s input = liftTransfer (transferStat' s) input
+transferStat s input = lift (transferStat' s) input
+    where
+    lift :: (Map String Result -> Map String Result) -> [(Context, Map String Result)] -> [(Context, Map String Result)]
+    lift f = map (\(ctx, m) -> (ctx, f m))
 
 transferStat' :: Stat' -> Map String Result -> Map String Result
 transferStat' (IAssign' _ name val) input = Map.insert name (evalI input val) input

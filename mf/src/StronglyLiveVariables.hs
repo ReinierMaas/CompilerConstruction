@@ -1,14 +1,18 @@
 module StronglyLiveVariables (
     extremalValue,
     merge,
-    transfer
+    unaryTransfer,
+    binaryTransfer
 ) where
 
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 
 import AttributeGrammar
+import Monotone (Context, liftTransfer)
 
 extremalValue :: Set String
 extremalValue = Set.empty
@@ -16,8 +20,15 @@ extremalValue = Set.empty
 merge :: Set String -> Set String -> Set String
 merge = Set.union
 
-transfer :: Stat' -> Maybe (Set String) -> Maybe (Set String)
-transfer stat = fmap (\input -> (input Set.\\ kill stat) `Set.union` (gen stat Set.\\ kill stat))
+unaryTransfer :: ProcOrStat -> [(Context, Set String)] -> [(Context, Set String)]
+unaryTransfer (P _) = id -- Ignore procedures
+unaryTransfer (S s) = liftTransfer $ transfer s
+
+binaryTransfer :: (Int, Int) -> Map Int ProcOrStat -> Map Int [(Context, Set String)] ->  [(Context, Set String)] -> [(Context, Set String)]
+binaryTransfer (l, _) nodes _ = unaryTransfer $ nodes Map.! l
+
+transfer :: Stat' -> Set String -> Set String
+transfer stat input = (input Set.\\ kill stat) `Set.union` (gen stat Set.\\ kill stat)
 
 kill :: Stat' -> Set String
 kill (IAssign' _ name _) = Set.singleton name
@@ -36,8 +47,8 @@ gen (Free' _ _) = Set.empty
 gen (RefAssign' _ _ val) = freeVarsI val
 gen (Continue' _) = Set.empty
 gen (Break' _) = Set.empty
+gen (Call' _ _ name _ _) = Set.empty
 gen (Seq' _ _) = error "Called gen on Seq"
-gen (Call' _ _ name _ _) = error "Called gen on Call"
 
 freeVarsI :: IExpr -> Set String
 freeVarsI (IConst v) = Set.empty

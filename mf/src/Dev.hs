@@ -29,8 +29,8 @@ import Parser
 cp :: Gr ProcOrStat () -> Map Int ([(Context, Map String CP.Result)], [(Context, Map String CP.Result)])
 cp graph = mfp (nodes' graph) [999999] CP.extremalValue (edges graph) CP.unaryTransfer CP.binaryTransfer CP.merge
 
---slv :: Gr ProcOrStat () -> Map Int (Maybe (Set String), Maybe (Set String))
---slv graph = mfp (nodes' graph) [999998] SLV.extremalValue (map swap (edges graph)) SLV.transfer SLV.merge
+slv :: Gr ProcOrStat () -> Map Int ([(Context, Set String)], [(Context, Set String)])
+slv graph = mfp (nodes' graph) [999998] SLV.extremalValue (map swap (edges graph)) SLV.unaryTransfer SLV.binaryTransfer SLV.merge
 
 nodes' :: Gr ProcOrStat () -> Map Int ProcOrStat
 nodes' = M.fromList . labNodes
@@ -65,10 +65,10 @@ runAnalysis' programName = do
     let cpAnalysis = fmap (\(x, y) -> show x ++ "\n" ++ show y) $ cp $ emap (const ()) cfg
     putStrLn $ renderAnalysis cpAnalysis (map fst extraNodes) extraEdges
     putStrLn ""
-    --putStrLn "SLV ANALYSIS:"
-    --let slvAnalysis = fmap (\(x, y) -> showJust' y ++ "\n" ++ showJust' x) $ slv $ emap (const ()) cfg
-    --putStrLn $ renderAnalysis slvAnalysis (map fst extraNodes) extraEdges
-    --putStrLn ""
+    putStrLn "SLV ANALYSIS:"
+    let slvAnalysis = fmap (\(x, y) -> show y ++ "\n" ++ show x) $ slv $ emap (const ()) cfg
+    putStrLn $ renderAnalysis slvAnalysis (map fst extraNodes) extraEdges
+    putStrLn ""
   else putStrLn $ "Errors: " ++ show errors
   putStrLn "THE END"
 

@@ -18,6 +18,9 @@ mergeStuff merge xs ys = Map.toList $ Map.unionWith merge (Map.fromList xs) (Map
 type UnaryTransfer a = ProcOrStat -> [(Context, a)] -> [(Context, a)]
 type BinaryTransfer a = (Int, Int) -> Map Int ProcOrStat -> Map Int [(Context, a)] -> [(Context, a)] -> [(Context, a)]
 
+liftTransfer :: (a -> a) -> [(Context, a)] -> [(Context, a)]
+liftTransfer f = map (\(ctx, m) -> (ctx, f m))
+
 mfp :: Eq a => Map Int ProcOrStat -- nodes
             -> [Int]              -- extremal labels
             -> a                  -- extremal value
