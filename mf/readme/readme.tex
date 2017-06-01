@@ -15,13 +15,12 @@
 \section*{Modules}
 
 \begin{itemize}
-\item \texttt{Lexer and Parser}: we got them for free and there are no relevant modifications.
-\item \texttt{Monotone}: implements the \texttt{mfp} function
-\item \texttt{AttributeGrammar}: enhanced
-\item \texttt{ConstPropagation}: const propagation analysis on top of mfp
-\item \texttt{StronglyLiveVariables}: strongly live variable analysis on top of mfp
-\item \texttt{ConstPropagation}: const propagation analysis on top of mfp
-\item \texttt{Main}: command-line utility to run the assignments
+\item \texttt{Lexer and Parser}: there are no relevant modifications to these modules.
+\item \texttt{Monotone}: implements the \texttt{mfp} function according to the slides of the course.
+\item \texttt{AttributeGrammar}: see \textbf{Attribute Grammar}.
+\item \texttt{ConstPropagation}: see \textbf{Constant Propagation}.
+\item \texttt{StronglyLiveVariables}: see \textbf{Strongly Live Variables}.
+\item \texttt{Main}: glues everything together in the \texttt{run} function (lexing, parsing, executing the attribute grammar, running the analyses and printing the results).
 \end{itemize}
 
 \section*{Building and running}
@@ -30,14 +29,7 @@ Provided you have \texttt{stack} and \texttt{uuagc} installed on your system, yo
 
 \subsubsection*{As a CLI tool}
 
-After compiling the executable, you can run it and will see the following message:
-
-\begin{verbatim}
-Usage:
-mf <max-context-depth> <file>
-\end{verbatim}
-
-This means that you should run the program specifying the max length of the context string and the relative path to the file you would like to analyze. For instance, if your working directory is the root of the project, you could try the following: \texttt{mf 2 examples/cp1.c}.
+After compiling the executable, you can run it using \texttt{mf <max-context-depth> <file>}. This means that you should run the program specifying the max length of the context string and the relative path to the file you would like to analyze. For instance, if your working directory is the root of the project, you could try the following: \texttt{mf 2 examples/cp1.c}.
 
 The results of the program are printed as a graph, specified in the DOT language. Each analysis produces its own graph. As you may already know, you can use GraphViz to actually get an image of the graph (or you can use \href{http://www.webgraphviz.com/}{this online version}).
 
@@ -61,17 +53,40 @@ Running the program from GHCi is almost the same as through the CLI application.
 
 \section*{Features and assumptions}
 
+% See https://github.com/aochagavia/CompilerConstruction/compare/mf-init...master for a diff
+
 Assumption: no global variables.
 
 \subsection*{Attribute Grammar}
 
-What did we do here?
+Extensions:
+
+\begin{itemize}
+	\item \texttt{Program} to \texttt{Program'} transformation (labeling)
+	\item CFG building: includes entry labels, exit labels. Basic support for error detection (e.g. \texttt{break} without a \texttt{while).
+\end{itemize}
 
 \subsection*{MFP implementation}
+
+A small note on our MFP implementation. Parameters:
+
+\begin{itemize}
+	\item nodes
+	\item extremal labels
+	\item extremal value
+	\item transitions (edges)
+	\item unary transfer function
+	\item binary transfer function
+	\item merge function
+\end{itemize}
+
+Nodes, transitions are obviously necessary. What about the rest? How do they interact with the algorithm?
 
 \subsection*{Constant Propagation}
 
 Interprocedural
+
+How is the lattice defined?
 
 How are the transfer functions defined?
 
@@ -79,10 +94,6 @@ Walkthrough
 
 \subsection*{Strongly Live Variables}
 
-Note: only intraprocedural
-
-How are the transfer functions defined?
-
-Walkthrough
+Same questions as Constant Propagation
 
 \end{document}
