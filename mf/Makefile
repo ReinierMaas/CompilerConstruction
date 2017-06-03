@@ -1,13 +1,23 @@
 default: all
 
-all: src/Lexer.hs src/Parser.hs src/AttributeGrammar.hs
+all: src/Lexer.hs src/Parser.hs src/AttributeGrammar.hs src/*
 	stack build
 
-output: all
-	stack exec mf graphs 1 examples\\ output\\
-
-pdf: readme/readme.tex
+pdf: readme/readme.tex output/*.png
 	cd readme && pdflatex -shell-escape readme.tex
+
+#----------------------------------------
+#-- Create PNG's from analysis results --
+#----------------------------------------
+
+output/*.png: output/*.cp output/*.slv
+	cpFiles := $(wildcard output/*.cp)
+	dot -Tpng -O cpFiles
+	slvFiles := $(wildcard output/*.slv)
+	dot -Tpng -O slvFiles
+
+output/*.cp output/*.slv: examples/* src/*
+	stack exec mf graphs 1 examples\\ output\\
 
 #----------------------------
 
@@ -30,6 +40,6 @@ src/AttributeGrammar.hs: src/AttributeGrammar.ag
 #----------------------------
 
 clean:
-	rm -f src/AttributeGrammar.hs src/Parser.hs src/Lexer.hs src/*.hi src/*.o src/Main
+	rm -f src/AttributeGrammar.hs src/Parser.hs src/Lexer.hs src/*.hi src/*.o output/*
 
 .PHONY: default all clean
