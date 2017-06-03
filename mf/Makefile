@@ -3,6 +3,9 @@ default: all
 all: src/Lexer.hs src/Parser.hs src/AttributeGrammar.hs
 	stack build
 
+pdf: readme/readme.tex
+	cd readme && pdflatex readme.tex
+
 #----------------------------
 
 src/Lexer.hs: src/Lexer.x
