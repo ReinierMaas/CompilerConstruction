@@ -3,8 +3,11 @@ default: all
 all: src/Lexer.hs src/Parser.hs src/AttributeGrammar.hs
 	stack build
 
+output: all
+	stack exec mf graphs 1 examples\\ output\\
+
 pdf: readme/readme.tex
-	cd readme && pdflatex readme.tex
+	cd readme && pdflatex -shell-escape readme.tex
 
 #----------------------------
 

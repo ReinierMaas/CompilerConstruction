@@ -2,6 +2,8 @@
 
 module Main where
 
+import System.Directory (createDirectoryIfMissing, listDirectory)
+import System.FilePath (combine, takeBaseName)
 import Control.Monad (when)
 import Data.Char (toUpper)
 import System.Environment (getArgs)
@@ -9,7 +11,7 @@ import Data.Text.Lazy (unpack)
 import Data.Map (Map)
 import qualified Data.Map as M
 
-import System.Console.Docopt (Arguments, Docopt, Option, docopt, parseArgs, exitWithUsageMessage, getArgOrExitWith, argument)
+import System.Console.Docopt (Arguments, Docopt, Option, docopt, parseArgs, exitWithUsage, exitWithUsageMessage, getArgOrExitWith, argument, isPresent, command)
 import Data.GraphViz (graphToDot, fmtNode, fmtEdge, nonClusteredParams)
 import Data.GraphViz.Attributes (toLabel)
 import Data.GraphViz.Printing (toDot, renderDot)
@@ -30,6 +32,8 @@ mf version 0.1.0
 
 Usage:
   mf <max-context-depth> <file>
+  mf graphs <max-context-depth> <inputDir> <outputDir>
+  mf --help | -h
 
 |]
 
@@ -43,9 +47,45 @@ main :: IO ()
 main = do
     arguments <- getArgs
     args <- parseArgsOrExit arguments
-    maxDepth <- args `getArgOrExit` (argument "max-context-depth")
-    file <- args `getArgOrExit` (argument "file")
-    run (read maxDepth) file
+    if (args `isPresent` (command "--help")) || (args `isPresent` (command "-h"))
+    then do
+        exitWithUsage usage
+    else    if args `isPresent` (command "graphs")
+            then do
+                maxDepth <- args `getArgOrExit` (argument "max-context-depth")
+                inputDir <- args `getArgOrExit` (argument "inputDir")
+                outputDir <- args `getArgOrExit` (argument "outputDir")
+                inputFiles <- listDirectory inputDir
+                createDirectoryIfMissing True outputDir
+                sequence_ $ map (\inputFile ->
+                    let name = takeBaseName inputFile
+                        inputFilePath = (combine inputDir inputFile)
+                        cpFilePath = (combine outputDir (name ++ ".cp"))
+                        slvFilePath = (combine outputDir (name ++ ".slv"))
+                    in  createGraphs (read maxDepth) inputFilePath cpFilePath slvFilePath) inputFiles
+            else do
+                maxDepth <- args `getArgOrExit` (argument "max-context-depth")
+                file <- args `getArgOrExit` (argument "file")
+                run (read maxDepth) file
+
+createGraphs :: Int -> String -> String -> String -> IO ()
+createGraphs maxDepth inputfile cpgraph slvgraph = do
+    p <- happy . alex <$> readFile inputfile
+    let (freshLabel, t) = sem_Program p 0
+    let (startLabel, finishLabel) = (freshLabel, freshLabel + 1)
+    let (edges, entryPoint, errors, exitLabels, nodes, _) = sem_Program' t
+    let extraNodes = (startLabel, S (Skip' startLabel)) : (finishLabel, S (Skip' finishLabel)) : nodes
+    let extraEdges = (startLabel, entryPoint, "") : map (\el -> (el, finishLabel, "")) exitLabels ++ edges
+    let cfg = mkGraph extraNodes extraEdges :: Gr ProcOrStat String
+    let nodeMap = M.fromList extraNodes
+    if null errors
+    then do
+        let cpAnalysis = fmap (\(x, y) -> (show x, show y)) (CP.runAnalysis maxDepth (emap (const ()) cfg) startLabel)
+        writeFile cpgraph $ renderAnalysis cpAnalysis nodeMap (map fst extraNodes) extraEdges
+
+        let slvAnalysis = fmap (\(x, y) -> (show y, show x)) $ (SLV.runAnalysis (emap (const ()) cfg) finishLabel)
+        writeFile slvgraph $ renderAnalysis slvAnalysis nodeMap (map fst extraNodes) extraEdges
+    else putStrLn $ "Errors: " ++ show errors
 
 run :: Int -> String -> IO ()
 run maxDepth path = do

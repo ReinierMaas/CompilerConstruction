@@ -32,6 +32,8 @@ executable mf
                        array,
                        docopt == 0.7.0.5,
                        fgl == 5.5.3.1,
-                       graphviz
+                       graphviz,
+                       filepath,
+                       directory
   hs-source-dirs:      src
   extensions:          DoAndIfThenElse

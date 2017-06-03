@@ -3,6 +3,8 @@ Lexer.hs
 Parser.hs
 Parser.info
 
+output/
+
 dist
 dist-*
 cabal-dev
