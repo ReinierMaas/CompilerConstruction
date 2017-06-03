@@ -16,7 +16,7 @@ src/Parser.hs: src/Parser.y src/AttributeGrammar.hs src/Lexer.hs
 #  -d              --data                          generate data type definition
 #  -c              --catas                         generate catamorphisms
 #  -f              --semfuns                       generate semantic functions
-#  -w              --wrappers                      generate wappers for semantic domains
+#  -w              --wrappers                      generate wrappers for semantic domains
 #  -s              --signatures                    generate signatures for semantic functions
 src/AttributeGrammar.hs: src/AttributeGrammar.ag
 	cd src && uuagc -Hdcfws AttributeGrammar.ag --module AttributeGrammar
