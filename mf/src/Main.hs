@@ -9,7 +9,7 @@ import Data.Text.Lazy (unpack)
 import Data.Map (Map)
 import qualified Data.Map as M
 
-import System.Console.Docopt (Docopt, docopt, parseArgsOrExit, getArgOrExitWith, argument)
+import System.Console.Docopt (Arguments, Docopt, Option, docopt, parseArgs, exitWithUsageMessage, getArgOrExitWith, argument)
 import Data.GraphViz (graphToDot, fmtNode, fmtEdge, nonClusteredParams)
 import Data.GraphViz.Attributes (toLabel)
 import Data.GraphViz.Printing (toDot, renderDot)
@@ -26,15 +26,23 @@ import qualified StronglyLiveVariables as SLV
 
 usage :: Docopt
 usage = [docopt|
+mf version 0.1.0
+
 Usage:
   mf <max-context-depth> <file>
+
 |]
 
+getArgOrExit :: Arguments -> Option -> IO String
 getArgOrExit = getArgOrExitWith usage
+
+parseArgsOrExit :: [String] -> IO Arguments
+parseArgsOrExit = either (\err -> exitWithUsageMessage usage (show err)) (\args -> return args) . parseArgs usage
 
 main :: IO ()
 main = do
-    args <- parseArgsOrExit usage =<< getArgs
+    arguments <- getArgs
+    args <- parseArgsOrExit arguments
     maxDepth <- args `getArgOrExit` (argument "max-context-depth")
     file <- args `getArgOrExit` (argument "file")
     run (read maxDepth) file

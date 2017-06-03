@@ -1,0 +1,3 @@
+# Set the default line ending behavior, in case people don't use LF.
+# needed for QuasiQuotes Docopt
+*.hs text eol=lf
