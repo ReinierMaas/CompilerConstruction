@@ -31,9 +31,9 @@ Below we explain how to actually run our code.
 
 \subsubsection*{As a CLI tool}
 
-After compiling the executable, you can run it using \texttt{stack exec mf <max-context-depth> <file>}.
+After compiling the executable, you can run it using \texttt{stack exec -- mf <max-context-depth> <file>}.
 This means that you should run the program specifying the max length of the context string and the relative path to the file you would like to analyze.
-For instance, if your working directory is the root of the project, you could try the following: \texttt{stack exec mf 2 examples/cp1.c}.
+For instance, if your working directory is the root of the project, you could try the following: \texttt{stack exec -- mf 2 examples/cp1.c}.
 
 If your run the executable and recieve the following error: \texttt{"argv" (line 1, column 1):unknown parse error}, the line endings in the QuasiQuoted part are \texttt{crlf} instead of \texttt{lf}.
 Please update the \texttt{Main.hs} file to use \texttt{lf} line endings.
@@ -60,7 +60,7 @@ digraph {
 
 \subsubsection*{From GHCi}
 
-Running the program from GHCi is almost the same as through the CLI application. While in the command line you need to execute \texttt{stack exec mf 2 examples/cp1.c}, in GHCi it is enough to write \texttt{run 2 "examples/cp1.c"}. In fact, the CLI is just a wrapper around the \texttt{run} function.
+Running the program from GHCi is almost the same as through the CLI application. While in the command line you need to execute \texttt{stack exec -- mf 2 examples/cp1.c}, in GHCi it is enough to write \texttt{run 2 "examples/cp1.c"}. In fact, the CLI is just a wrapper around the \texttt{run} function.
 
 \section*{Features and assumptions}
 
