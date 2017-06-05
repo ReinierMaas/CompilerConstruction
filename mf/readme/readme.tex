@@ -32,7 +32,7 @@ Provided you have \texttt{stack} and \texttt{uuagc} installed on your system, yo
 The project should probably build as well when using cabal, though we haven't tested it.
 Below we explain how to actually run our code.
 
-\subsection*{As a CLI tool}
+\subsection*{Analyze a single program}
 
 After compiling the executable, you can run it using the command below:
 
@@ -66,9 +66,15 @@ digraph {
 }
 \end{verbatim}
 
+\subsection*{Analyze all programs in a given directory}
+
+FIXME: write
+
+.cp files for constant propagation, .slv files for strongly live variables.
+
 \subsection*{From GHCi}
 
-Running the program from GHCi is almost the same as through the CLI tool. You can do it by calling the \texttt{run} function (e.g. \texttt{run 2 "examples/cp1.c"}). In fact, the CLI is just a wrapper around the \texttt{run} function.
+Running the program from GHCi is almost the same as through the CLI tool. You can do it by calling the \texttt{run} function (e.g. \texttt{run 2 "examples/cp1.c"}) or the \texttt{runAll} function (e.g. \texttt{runAll 2 "examples" "analysis"}). In fact, the CLI is just a wrapper around the \texttt{run} and \texttt{runAll} functions.
 
 \section{Features and assumptions}
 
