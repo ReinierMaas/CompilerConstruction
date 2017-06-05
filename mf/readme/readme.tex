@@ -1,7 +1,10 @@
 \documentclass{article}
 
 \usepackage{fancyvrb}
+\usepackage{graphicx}
 \usepackage{hyperref}
+
+\graphicspath{ {images/} }
 
 \DefineVerbatimEnvironment{verbatim}{Verbatim}{xleftmargin=.5in}
 
@@ -14,17 +17,6 @@
 \begin{document}
 
 \maketitle
-
-\section{Modules}
-
-\begin{itemize}
-\item \texttt{Lexer and Parser}: there are no relevant modifications to these modules.
-\item \texttt{Monotone}: implements the \texttt{mfp} function according to the slides of the course. Our implementation supports embellished monotone instances.
-\item \texttt{AttributeGrammar}: see \textbf{Attribute Grammar}.
-\item \texttt{ConstPropagation}: see \textbf{Constant Propagation}.
-\item \texttt{StronglyLiveVariables}: see \textbf{Strongly Live Variables}.
-\item \texttt{Main}: glues everything together in the \texttt{run} function (lexing, parsing, executing the attribute grammar, running the analyses and printing the results).
-\end{itemize}
 
 \section{Building and running}
 
@@ -82,13 +74,39 @@ Since the analysis is run for many programs, the output is no longer printed to 
 
 Running the program from GHCi is almost the same as through the CLI tool. You can do it by calling the \texttt{run} function (e.g. \texttt{run 2 "examples/cp1.c"}) or the \texttt{runAll} function (e.g. \texttt{runAll 2 "examples" "results"}). In fact, the CLI is just a wrapper around the \texttt{run} and \texttt{runAll} functions.
 
-\section{Features and assumptions}
+\subsection*{A side-note on the formatting of graphs}
+
+In order to support graphs with more than one entry point and exit points, we add two additional skip nodes; one at the beginning and one at the end. This way we obtain a graph with a single entry point and a single exit point.
+
+\section{Implementation details}
 
 % See https://github.com/aochagavia/CompilerConstruction/compare/mf-init...master for a diff
 
 \subsection*{Assumptions}
 
 In order to reduce the complexity of the implementation, we assume that no global variables exist in the programming language.
+
+\subsection*{Modules}
+
+\begin{itemize}
+	\item \texttt{Lexer and Parser}: there are no relevant modifications to these modules.
+	\item \texttt{Monotone}: implements the \texttt{mfp} function according to the slides of the course. Our implementation supports embellished monotone instances.
+	\item \texttt{AttributeGrammar}: see \textbf{Attribute Grammar}.
+	\item \texttt{ConstPropagation}: see \textbf{Constant Propagation}.
+	\item \texttt{StronglyLiveVariables}: see \textbf{Strongly Live Variables}.
+	\item \texttt{Main}: glues everything together in the \texttt{run} function (lexing, parsing, executing the attribute grammar, running the analyses and printing the results).
+\end{itemize}
+
+\subsection*{Code samples}
+
+We wrote several code samples, stored in different directories depending on their purpose:
+
+\begin{itemize}
+	\item \texttt{examples}: samples to test both analyses.
+	\item \texttt{examples/cp}: samples to test constant propagation.
+	\item \texttt{examples/slv}: samples to test strongly live variables.
+	\item \texttt{examples/error}: samples that should be rejected by our tool.
+\end{itemize}
 
 \subsection*{Attribute Grammar}
 
@@ -107,7 +125,7 @@ Our implementation of the MFP algorithm follows the slides and does not require 
 
 The constant propagation analysis is implemented as an embellished monotone instance with support for interprocedural analysis. The value for \texttt{k} is determined by the user through the \texttt{max-context-length} parameter.
 
-FIXME: How is the lattice defined?
+FIXME: How is the lattice defined? If there is no time to explain, remove this paragraph.
 
 The transfer functions are based on the analysis explained during the lectures, with the only difference that we need to account for changes to the context. The unary transfer function is therefore trivially implemented by evaluating the expressions and keeping a map of the values associated to each variable (or $\top$ in some cases). The binary transfer function, however, is a bit more complex and is used to handle edges starting at procedures (\texttt{Proc'}) or calls (\texttt{Call'}).
 
@@ -121,20 +139,46 @@ The strongly live variables analysis is implemented as an embellished monotone i
 
 Regarding the transfer functions, the binary transfer function just ignores the second parameter and calls the unary transfer function under the hood. The implementation of the unary transfer function is based on gen sets and kill sets, as explained during the lecture.
 
-FIXME: How is the lattice defined? No idea?
+In this analysis we follow the approach in the book, which means that the we assume no variables will be used at the end of the program.
+
+As explained in the lectures, the lattice is defined as:
+
+\begin{itemize}
+	\item $L = \mathcal{P}(\mathbf{Var_*})$ (finite sets of variables)
+	\item $\sqcup\ =\ \cup$ and $\sqsubseteq\ =\ \subseteq$
+	\item $\bot = \emptyset$ and $\top = \mathbf{Var_*}$
+\end{itemize}
 
 \section{Analyses walkthrough}
 
 \subsection*{Constant Propagation}
 
-To showcase constant propagation, we walk through the analysis of the \texttt{cp1.c} program [FIXME: replace cp1.c by the name of the real program we are going to analyze].
+To showcase constant propagation, we walk through the analysis of the \texttt{easy.c} program in \texttt{examples/cp}. The results of the analysis can be observed in Figure \ref{fig-cp} and are explained below. While we would have preferred to walk through a more complex case, it would result in a much bigger graph and would be impossible to include in a sensible way in this document.
 
-FIXME: insert the analysis graph here so we can explain it. Show node ids.
+First of all, notice that there are two \texttt{skip} nodes that do not appear in the original program. those are inserted by our tool at the beginning and at the end of the graph. Since they do not have any influence in the output of the analysis we are going to ignore them.
+
+At node 0, we see that the initial list of available constants is empty, which is another way to indicate that the value associated to each variable is $\top$. However, at the end of said node we see that the constant value associated to $x$ has changed and is now 42. This result propagates to node 1 and after processing the statement we know the value of $y$ as well. The situation with node 2 is analogous. Node 3 redefines the value of $x$ and you can see that it is correctly updated in the list of available constants.
+
+\begin{figure}
+\centering
+\includegraphics[width=11cm, height=18cm]{cp_easy}
+\caption{Constant propagation analysis for the \texttt{easy\_cp.c} program.}
+\label{fig-cp}
+\end{figure}
 
 \subsection*{Strongly Live Variables}
 
-FIXME: finish writing
+To showcase strongly live variables propagation, we walk through the analysis of the \texttt{ifthenelse1.c} program in \texttt{examples/slv}. The results of the analysis can be observed in Figure \ref{fig-slv} and are explained below.
 
-To showcase constant propagation, we walk through the analysis of the \texttt{cp1.c} program [FIXME: replace cp1.c by the name of the real program we are going to analyze].
+As expected, node 0 shows that there are no live variables live at the beginning of the program. However, $x$ becomes live after the assignment, since it is going to be used by node 2. Our analysis is not smart enough to know that the true branch will always be taken, so $x$ would be live even if it was only used by node 3. However, you can see that $x$ is no longer live at the beginning of node 3, while it does live at the beginning of node 2.
+
+Finally, as you can observe from looking at node 6, there are no live variables at the end of the program. This is consistent with our choice of following the approach used in the book, where it is assumed that no variables are read after the program ends.
+
+\begin{figure}
+	\centering
+	\includegraphics[width=10cm, height=18cm]{slv_ifthenelse1}
+	\caption{Strongly live variable analysis for the \texttt{ifthenelse1.c} program.}
+	\label{fig-slv}
+\end{figure}
 
 \end{document}
