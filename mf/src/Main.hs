@@ -2,9 +2,9 @@
 
 module Main where
 
-import System.Directory (createDirectoryIfMissing, listDirectory)
+import System.Directory (createDirectoryIfMissing, doesFileExist, listDirectory)
 import System.FilePath (combine, takeBaseName)
-import Control.Monad (when)
+import Control.Monad (filterM)
 import Data.Char (toUpper)
 import System.Environment (getArgs)
 import Data.Text.Lazy (unpack)
@@ -85,14 +85,14 @@ run maxDepth path = do
 
 runAll :: Int -> String -> String -> IO ()
 runAll maxDepth inputDir outputDir = do
-    inputFiles <- listDirectory inputDir
+    dirEntries <- listDirectory inputDir
+    inputFiles <- filterM doesFileExist $ map (combine inputDir) dirEntries
     createDirectoryIfMissing True outputDir
     sequence_ $ map (\inputFile ->
         let name = takeBaseName inputFile
-            inputFilePath = (combine inputDir inputFile)
             cpFilePath = (combine outputDir (name ++ ".cp"))
             slvFilePath = (combine outputDir (name ++ ".slv"))
-        in  createGraphs maxDepth inputFilePath cpFilePath slvFilePath) inputFiles
+        in  createGraphs maxDepth inputFile cpFilePath slvFilePath) inputFiles
     where
     createGraphs :: Int -> String -> String -> String -> IO ()
     createGraphs maxDepth inputfile cpgraph slvgraph = do
@@ -111,7 +111,7 @@ runAll maxDepth inputDir outputDir = do
 
             let slvAnalysis = fmap (\(x, y) -> (show y, show x)) $ (SLV.runAnalysis (emap (const ()) cfg) finishLabel)
             writeFile slvgraph $ renderAnalysis slvAnalysis nodeMap (map fst extraNodes) extraEdges
-        else putStrLn $ "Errors: " ++ show errors
+        else putStrLn $ "Errors when analyzing '" ++ inputfile ++  "': " ++ show errors
 
 renderGraph :: Gr String String -> String
 renderGraph g = unpack $ renderDot $ toDot $ graphToDot params g

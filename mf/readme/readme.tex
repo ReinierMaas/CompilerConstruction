@@ -40,7 +40,7 @@ After compiling the executable, you can run it using the command below:
 stack exec -- mf <max-context-depth> <file>
 \end{verbatim}
 
-Here, \texttt{max-context-depth} refers to the maximum length of the context string and \texttt{file} to the relative path to the file you would like to analyze. For instance, if your working directory is the root of the project, you could try the following\footnote{Note that the code assumes line endings are \texttt{LF}. Since \texttt{git} may change the line endings under the hood, it is possible for the code to have \texttt{CRLF} line endings. If this happens, running the executable will result in an error: \texttt{"argv" (line 1, column 1):unknown parse error}}.
+Here, \texttt{max-context-depth} refers to the maximum length of the context string and \texttt{file} to the path to the file you would like to analyze. For instance, if your working directory is the root of the project, you could try the following\footnote{Note that the code assumes line endings are \texttt{LF}. Since \texttt{git} may change the line endings under the hood, it is possible for the code to have \texttt{CRLF} line endings. If this happens, running the executable will result in an error: \texttt{"argv" (line 1, column 1):unknown parse error}}:
 
 \begin{verbatim}
 stack exec -- mf 2 examples/cp1.c
@@ -68,13 +68,19 @@ digraph {
 
 \subsection*{Analyze all programs in a given directory}
 
-FIXME: write
+It is also possible to run the analysis for all programs in a given directory. This can be achieved with the command below:
 
-.cp files for constant propagation, .slv files for strongly live variables.
+\begin{verbatim}
+stack exec -- mf all <max-context-depth> <inputDir> <outputDir>
+\end{verbatim}
+
+Here, \texttt{inputDir} is the path to the directory where the programs are to be found. For instance, you could use \texttt{examples} as a value in order to analyze all files in said directory.
+
+Since the analysis is run for many programs, the output is no longer printed to \texttt{stdout}. Instead, for each program, two files are created which contain the resulting graph after the analysis. Here, the \texttt{.cp} file extension is used to store the results of constant propagation, while the \texttt{.slv} is used to store those of strongly live variables. Naturally, the resulting files are saved in the directory specified through \texttt{outputDir}.
 
 \subsection*{From GHCi}
 
-Running the program from GHCi is almost the same as through the CLI tool. You can do it by calling the \texttt{run} function (e.g. \texttt{run 2 "examples/cp1.c"}) or the \texttt{runAll} function (e.g. \texttt{runAll 2 "examples" "analysis"}). In fact, the CLI is just a wrapper around the \texttt{run} and \texttt{runAll} functions.
+Running the program from GHCi is almost the same as through the CLI tool. You can do it by calling the \texttt{run} function (e.g. \texttt{run 2 "examples/cp1.c"}) or the \texttt{runAll} function (e.g. \texttt{runAll 2 "examples" "results"}). In fact, the CLI is just a wrapper around the \texttt{run} and \texttt{runAll} functions.
 
 \section{Features and assumptions}
 
