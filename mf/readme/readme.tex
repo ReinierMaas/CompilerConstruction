@@ -1,6 +1,9 @@
 \documentclass{article}
 
+\usepackage{fancyvrb}
 \usepackage{hyperref}
+
+\DefineVerbatimEnvironment{verbatim}{Verbatim}{xleftmargin=.5in}
 
 \author{
   Reinier Maas \\ 4131495
@@ -12,31 +15,36 @@
 
 \maketitle
 
-\section*{Modules}
+\section{Modules}
 
 \begin{itemize}
 \item \texttt{Lexer and Parser}: there are no relevant modifications to these modules.
-\item \texttt{Monotone}: implements the \texttt{mfp} function according to the slides of the course.
+\item \texttt{Monotone}: implements the \texttt{mfp} function according to the slides of the course. Our implementation supports embellished monotone instances.
 \item \texttt{AttributeGrammar}: see \textbf{Attribute Grammar}.
 \item \texttt{ConstPropagation}: see \textbf{Constant Propagation}.
 \item \texttt{StronglyLiveVariables}: see \textbf{Strongly Live Variables}.
 \item \texttt{Main}: glues everything together in the \texttt{run} function (lexing, parsing, executing the attribute grammar, running the analyses and printing the results).
 \end{itemize}
 
-\section*{Building and running}
+\section{Building and running}
 
 Provided you have \texttt{stack} and \texttt{uuagc} installed on your system, you can use \texttt{make} to build the project.
 The project should probably build as well when using cabal, though we haven't tested it.
 Below we explain how to actually run our code.
 
-\subsubsection*{As a CLI tool}
+\subsection*{As a CLI tool}
 
-After compiling the executable, you can run it using \texttt{stack exec -- mf <max-context-depth> <file>}.
-This means that you should run the program specifying the max length of the context string and the relative path to the file you would like to analyze.
-For instance, if your working directory is the root of the project, you could try the following: \texttt{stack exec -- mf 2 examples/cp1.c}.
+After compiling the executable, you can run it using the command below:
 
-If your run the executable and recieve the following error: \texttt{"argv" (line 1, column 1):unknown parse error}, the line endings in the QuasiQuoted part are \texttt{crlf} instead of \texttt{lf}.
-Please update the \texttt{Main.hs} file to use \texttt{lf} line endings.
+\begin{verbatim}
+stack exec -- mf <max-context-depth> <file>
+\end{verbatim}
+
+Here, \texttt{max-context-depth} refers to the maximum length of the context string and \texttt{file} to the relative path to the file you would like to analyze. For instance, if your working directory is the root of the project, you could try the following\footnote{Note that the code assumes line endings are \texttt{LF}. Since \texttt{git} may change the line endings under the hood, it is possible for the code to have \texttt{CRLF} line endings. If this happens, running the executable will result in an error: \texttt{"argv" (line 1, column 1):unknown parse error}}.
+
+\begin{verbatim}
+stack exec -- mf 2 examples/cp1.c
+\end{verbatim}
 
 The results of the program are printed as a graph, specified in the DOT language.
 Each analysis produces its own graph.
@@ -58,53 +66,63 @@ digraph {
 }
 \end{verbatim}
 
-\subsubsection*{From GHCi}
+\subsection*{From GHCi}
 
-Running the program from GHCi is almost the same as through the CLI application. While in the command line you need to execute \texttt{stack exec -- mf 2 examples/cp1.c}, in GHCi it is enough to write \texttt{run 2 "examples/cp1.c"}. In fact, the CLI is just a wrapper around the \texttt{run} function.
+Running the program from GHCi is almost the same as through the CLI tool. You can do it by calling the \texttt{run} function (e.g. \texttt{run 2 "examples/cp1.c"}). In fact, the CLI is just a wrapper around the \texttt{run} function.
 
-\section*{Features and assumptions}
+\section{Features and assumptions}
 
 % See https://github.com/aochagavia/CompilerConstruction/compare/mf-init...master for a diff
 
-Assumption: no global variables.
+\subsection*{Assumptions}
+
+In order to reduce the complexity of the implementation, we assume that no global variables exist in the programming language.
 
 \subsection*{Attribute Grammar}
 
-Extensions:
+The starting framework that we used for the assignment came with two definitions of the abstract syntax tree, the second one being just a duplicate of the first, except for the fact that it includes labels for each node. There are mainly two features that we had to implement before we could start working on the analysis part:
 
-\begin{itemize}
-	\item \texttt{Program} to \texttt{Program'} transformation (labeling)
-	\item CFG building: includes entry labels, exit labels. Basic support for error detection (e.g. \texttt{break} without a \texttt{while}).
-\end{itemize}
+\begin{enumerate}
+	\item Labeling the AST by transforming the original \texttt{Program} into a \texttt{Program'}.
+	\item Building a control flow graph of the resulting \texttt{Program'}. In this step, we included basic support for error detection, such as rejecting programs where \texttt{break} or \texttt{continue} statements appear outside a loop.
+\end{enumerate}
 
 \subsection*{MFP implementation}
 
-A small note on our MFP implementation. Parameters:
-
-\begin{itemize}
-	\item nodes
-	\item extremal labels
-	\item extremal value
-	\item transitions (edges)
-	\item unary transfer function
-	\item binary transfer function
-	\item merge function
-\end{itemize}
-
-Nodes, transitions are obviously necessary. What about the rest? How do they interact with the algorithm?
+Our implementation of the MFP algorithm follows the slides and does not require much explanation. Since we support embellished monotone instances, the user needs to provide unary and binary transfer functions. We also provide a \texttt{liftTransfer} function that can be used by monotone instances to lift transfer functions where the context remains unchanged.
 
 \subsection*{Constant Propagation}
 
-Interprocedural
+The constant propagation analysis is implemented as an embellished monotone instance with support for interprocedural analysis. The value for \texttt{k} is determined by the user through the \texttt{max-context-length} parameter.
 
-How is the lattice defined?
+FIXME: How is the lattice defined?
 
-How are the transfer functions defined?
+The transfer functions are based on the analysis explained during the lectures, with the only difference that we need to account for changes to the context. The unary transfer function is therefore trivially implemented by evaluating the expressions and keeping a map of the values associated to each variable (or $\top$ in some cases). The binary transfer function, however, is a bit more complex and is used to handle edges starting at procedures (\texttt{Proc'}) or calls (\texttt{Call'}).
 
-Walkthrough
+The transfer function when the edge starts at the entry of a \texttt{Proc'} is the identity function. However, when the edge starts at the exit of a \texttt{Proc}, things get more complicated, since we need to combine the results of the analysis of the procedure with the information we have at the call site. [FIXME: explain how we do this]
+
+The transfer function when the edge starts at the entry of a \texttt{Call'} is ... [FIXME: I don't understand what is going on in the code...]
 
 \subsection*{Strongly Live Variables}
 
-Same questions as Constant Propagation
+The strongly live variables analysis is implemented as an embellished monotone instance, but it only supports intraprocedural analysis. This means that the \texttt{max-content-length} parameter is ignored and the value of \texttt{k} is always zero.
+
+Regarding the transfer functions, the binary transfer function just ignores the second parameter and calls the unary transfer function under the hood. The implementation of the unary transfer function is based on gen sets and kill sets, as explained during the lecture.
+
+FIXME: How is the lattice defined? No idea?
+
+\section{Analyses walkthrough}
+
+\subsection*{Constant Propagation}
+
+To showcase constant propagation, we walk through the analysis of the \texttt{cp1.c} program [FIXME: replace cp1.c by the name of the real program we are going to analyze].
+
+FIXME: insert the analysis graph here so we can explain it. Show node ids.
+
+\subsection*{Strongly Live Variables}
+
+FIXME: finish writing
+
+To showcase constant propagation, we walk through the analysis of the \texttt{cp1.c} program [FIXME: replace cp1.c by the name of the real program we are going to analyze].
 
 \end{document}
