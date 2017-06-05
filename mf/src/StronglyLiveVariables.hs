@@ -14,7 +14,7 @@ import Data.Tuple (swap)
 import AttributeGrammar
 import Monotone (Context, liftTransfer, mfp)
 
--- Dinges
+-- Exposed analysis
 runAnalysis :: Gr ProcOrStat () -> Int -> Map Int ([(Context, Set String)], [(Context, Set String)])
 runAnalysis graph entryLabel = mfp (Map.fromList (labNodes graph)) [entryLabel] extremalValue (map swap (edges graph)) unaryTransfer binaryTransfer merge
 
