@@ -3,7 +3,7 @@ default: all
 all: src/Lexer.hs src/Parser.hs src/AttributeGrammar.hs src/*
 	stack build
 
-pdf: readme/readme.tex output/
+pdf: readme/readme.tex
 	cd readme && pdflatex -shell-escape readme.tex
 
 graphs: output/
