@@ -11,10 +11,8 @@ pdf: readme/readme.tex output/*.png
 #----------------------------------------
 
 output/*.png: output/*.cp output/*.slv
-	cpFiles := $(wildcard output/*.cp)
-	dot -Tpng -O cpFiles
-	slvFiles := $(wildcard output/*.slv)
-	dot -Tpng -O slvFiles
+	dot -Tpng -O $(wildcard output/*.cp)
+	dot -Tpng -O $(wildcard output/*.slv)
 
 output/*.cp output/*.slv: examples/* src/*
 	stack exec mf graphs 1 examples\\ output\\

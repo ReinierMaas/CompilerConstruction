@@ -1,6 +1,11 @@
 \documentclass{article}
 
 \usepackage{hyperref}
+\usepackage{minted}
+\usepackage{import}
+\usepackage{graphicx}
+\usepackage{grffile}
+\graphicspath{ {../output/} }
 
 \author{
   Reinier Maas \\ 4131495
@@ -106,5 +111,39 @@ Walkthrough
 \subsection*{Strongly Live Variables}
 
 Same questions as Constant Propagation
+
+\subsection*{Example programs}
+
+\subsubsection*{Break \& Continue Error}
+
+\inputminted{c}{../examples/break_error.c}
+
+\inputminted{c}{../examples/continue_error.c}
+
+These errors are the once catched during the attribute grammar phase.
+
+\subsubsection*{Add}
+
+\inputminted{c}{../examples/add.c}
+
+\includegraphics[width=\textwidth,height=\textheight,keepaspectratio]{add.cp.png}
+
+At the beginning there is always a skip.
+There are not yet any constants that can be propagated.
+When the first assignment happens the x gets assigned a 2.
+This is vissible in the graph, the x gets a constants
+
+
+\includegraphics[width=\textwidth,height=\textheight,keepaspectratio]{add.slv.png}
+
+
+\subsubsection*{Fibonacci}
+
+\inputminted{c}{../examples/fib.c}
+
+\includegraphics[width=\textwidth,height=\textheight,keepaspectratio]{fib.cp.png}
+\includegraphics[width=\textwidth,height=\textheight,keepaspectratio]{fib.slv.png}
+
+
 
 \end{document}
