@@ -7,7 +7,7 @@ import System.FilePath (combine, takeBaseName)
 import Control.Monad (filterM)
 import Data.Char (toUpper)
 import System.Environment (getArgs)
-import Data.Text.Lazy (unpack)
+import qualified Data.Text.Lazy as Text
 import Data.Map (Map)
 import qualified Data.Map as M
 
@@ -114,10 +114,10 @@ runAll maxDepth inputDir outputDir = do
         else putStrLn $ "Errors when analyzing '" ++ inputfile ++  "': " ++ show errors
 
 renderGraph :: Gr String String -> String
-renderGraph g = unpack $ renderDot $ toDot $ graphToDot params g
+renderGraph g = Text.unpack $ renderDot $ toDot $ graphToDot params g
     where
     params = nonClusteredParams { fmtNode = fn, fmtEdge = fe }
-    fn (_, l) = [toLabel l]
+    fn (i, l) = [toLabel (Text.append (Text.pack ("Node id: " ++ show i ++ " \n")) (Text.pack l))]
     fe (_, _, l) = [toLabel l]
 
 -- Transforms the analysis results in a graph where each node shows the results of the analysis,
