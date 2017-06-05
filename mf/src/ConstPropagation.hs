@@ -45,12 +45,12 @@ binaryTransfer maxDepth (l, l') nodes analysis = case nodes Map.! l of
                                                 a = analysis Map.! (getCallLabel call)
                                             in  transferProc maxDepth p (getStat call) a
                                        else id
-    (S s@(Call' lc lc' name _ _))   -> let p = getProc $ head $ filter (isProc name) $ map snd $ Map.toList nodes in
-                                       if l == lc && l' == lc'
-                                       then transferProc maxDepth p s (analysis Map.! lc)
-                                       else if l == lc'
+    (S s@(Call' lc lc' name _ _))   -> let p = getProc $ fromJust $ find (isProc name) $ map snd $ Map.toList nodes in
+                                       if l == lc && l' == lc' -- Edge between call entry and call exit at the call site
+                                       then transferProc maxDepth p s (analysis Map.! lc) -- Join the analysis from the procedure with the current analysis
+                                       else if l == lc' -- Edge from call exit to something
                                             then id
-                                            else transferCall maxDepth s $ getProc $ fromJust $ find (isProc name) $ map snd $ Map.toList nodes
+                                            else transferCall maxDepth s p -- Edge from call entry to proc entry
     (S s)                           -> transferStat s
     where
     getCallLabel :: ProcOrStat -> Int
@@ -86,7 +86,7 @@ transferProc maxDepth (Proc' entryLabel returnLabel nameProc inputs result _) (C
     isInit [] _ = True
     isInit (x:xs) (y:ys) = x == y && isInit xs ys
 
--- Only called for calls with the corresponding procedure provided
+-- Only called for calls with the corresponding procedure provided (for edges between call entry and proc entry)
 transferCall :: Int -> Stat' -> Proc' -> [(Context, Map String Result)] -> [(Context, Map String Result)]
 transferCall maxDepth (Call' callLabel exitLabel nameCall params output) (Proc' entryLabel returnLabel nameProc inputs result _) input
     = Map.toList $ Map.fromListWith merge $ map (\(ctx, vals) -> (newContext maxDepth callLabel ctx, valsToInput vals)) input
