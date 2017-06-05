@@ -3,21 +3,19 @@ default: all
 all: src/Lexer.hs src/Parser.hs src/AttributeGrammar.hs src/*
 	stack build
 
-pdf: readme/readme.tex output/*.png
+pdf: readme/readme.tex output/
 	cd readme && pdflatex -shell-escape readme.tex
+
+graphs: output/
 
 #----------------------------------------
 #-- Create PNG's from analysis results --
 #----------------------------------------
 
-output/*.png: output/*.cp output/*.slv
-	cpFiles := $(wildcard output/*.cp)
-	dot -Tpng -O cpFiles
-	slvFiles := $(wildcard output/*.slv)
-	dot -Tpng -O slvFiles
-
-output/*.cp output/*.slv: examples/* src/*
-	stack exec mf graphs 1 examples\\ output\\
+output/: examples/* src/*
+	stack exec mf all 1 examples\\ output\\
+	dot -Tpdf -O $(wildcard output/*.cp)
+	dot -Tpdf -O $(wildcard output/*.slv)
 
 #----------------------------
 

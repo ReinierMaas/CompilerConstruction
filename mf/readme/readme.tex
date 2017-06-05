@@ -21,7 +21,8 @@
 \section{Building and running}
 
 Provided you have \texttt{stack} and \texttt{uuagc} installed on your system, you can use \texttt{make} to build the project.
-The project should probably build as well when using cabal, though we haven't tested it.
+The project should probably build as well when using \texttt{cabal}, though we haven't tested it.
+To also generate the graphs we need \texttt{GraphViz} installed on the system.
 Below we explain how to actually run our code.
 
 \subsection*{Analyze a single program}
@@ -141,17 +142,17 @@ In the lattice, each variable is mapped to one of the following items:
 
 % Stolen from https://cseweb.ucsd.edu/classes/fa03/cse231/lec10seq.pdf
 \begin{enumerate}
-	\item $\top$, meaning that the variable may be a constant;
-	\item $\bot$, meaning that the variable is not a constant;
-	\item $k$ (a boolean or integral value), meaning that the variable has the constant value of $k$.
+	\item $\top$, meaning that the variable may be a constant but our analysis cannot prove it;
+	\item $\bot$, meaning that the variable is undefined;
+	\item $k$ (a boolean or integral value), meaning that the variable has the constant value of $k$;
 \end{enumerate}
 
 The operations on the lattice are defined by pattern matching as follows:
 
 \begin{itemize}
-	\item $x \sqcup \top = x$
-	\item $x \sqcup \bot = \bot$
-	\item $x \sqcup y = \mathbf{if}\ x == y\ \mathbf{then}\ x\ \mathbf{else}\ \bot$
+	\item $x \sqcup \top = \top$
+	\item $x \sqcup \bot = x$
+	\item $x \sqcup y = \mathbf{if}\ x == y\ \mathbf{then}\ x\ \mathbf{else}\ \top$
 	\item $x \sqsubseteq y = x == y$
 \end{itemize}
 
@@ -192,7 +193,7 @@ At node 0, we see that the initial list of available constants is empty, which i
 
 To showcase strongly live variables propagation, we walk through the analysis of the \texttt{ifthenelse1.c} program in \texttt{examples/slv}. The results of the analysis can be observed in Figure \ref{fig-slv} and are explained below.
 
-As expected, node 0 shows that there are no live variables live at the beginning of the program. However, $x$ becomes live after the assignment, since it is going to be used by node 2. Our analysis is not smart enough to know that the true branch will always be taken, so $x$ would be live even if it was only used by node 3. However, you can see that $x$ is no longer live at the beginning of node 3, while it does live at the beginning of node 2.
+As expected, node 0 shows that there are no live variables live at the beginning of the program. However, $x$ becomes live after the assignment, since it is going to be used by node 2. The analysis propagates this information backwards through the graph. Our analysis is not smart enough to know that the true branch will always be taken, so $x$ would be live even if it was only used by node 3. However, you can see that $x$ is no longer live at the beginning of node 3, while it does live at the beginning of node 2.
 
 Finally, as you can observe from looking at node 6, there are no live variables at the end of the program. This is consistent with our choice of following the approach used in the book, where it is assumed that no variables are read after the program ends.
 
