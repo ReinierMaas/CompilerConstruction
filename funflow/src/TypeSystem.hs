@@ -36,10 +36,20 @@ data Type = TypeInteger
 data TypeScheme = SchemeType Type
                 | ForAll Int TypeScheme
 
+{- Generalization -}
 generalize :: TypeEnv -> Type -> TypeScheme
 generalize = undefined
+{-
+    Search all Var names in Type
+    strip names that do correspond to a TypeEnv
+    Create Foralls vor other Vars
+    Something like this
+-}
+freeVars :: Type -> [Name]
+freeVars = undefined
 
-instantiate :: TypeScheme -> Type
+{- Instantiation -}
+instantiate :: Maybe TypeScheme -> Type
 instantiate = undefined
 
 {- Unification -}
@@ -71,7 +81,7 @@ fresh = do
 w :: TypeEnv -> Expr -> State Int (Type, TypeSubstitution)
 w _ (Integer _) = return (TypeInteger, id)
 w _ (Bool _) = return (TypeBool, id)
-w env (Var x) = undefined -- See slides on page 24. Unclear how to implement.
+w env (Var x) = return (instantiate (envLookup x env), id) -- See slides on page 24. Unclear how to implement.
 w env (Fn pi x t1) = do
     a1 <- fresh
     (t2, subs) <- w (envAppend x (SchemeType a1) env) t1
