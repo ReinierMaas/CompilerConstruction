@@ -1,9 +1,9 @@
 module Ast where
 
-data Op 
-  = Add | Sub | Mul | Div  
+data Op
+  = Add | Sub | Mul | Div
   deriving (Eq,Show)
-  
+
 type Pi    = Integer -- For numbering lambda's etc. that can then be tracked in the analysis
 type Name  = String  -- For identifier names
 
@@ -28,4 +28,4 @@ bin op x y = Oper r x y where
         "*" -> Mul
         "/" -> Div
 
-        
+
