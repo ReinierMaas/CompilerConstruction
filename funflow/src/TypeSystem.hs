@@ -38,15 +38,18 @@ data TypeScheme = SchemeType Type
 
 {- Generalization -}
 generalize :: TypeEnv -> Type -> TypeScheme
-generalize = undefined
+generalize env t = foldr (\a ts -> ForAll a ts) (SchemeType t) (freeAlpha t)
+
 {-
-    Search all Var names in Type
-    strip names that do correspond to a TypeEnv
-    Create Foralls vor other Vars
-    Something like this
+    Search all alpha's in Type
+    Strip names that correspond to a TypeEnv entry
+    Create Foralls vor other alpha's
 -}
-freeVars :: Type -> [Name]
-freeVars = undefined
+
+freeAlpha :: Type -> [Int]
+freeAlpha (TypeFn t1 t2) = (freeAlpha t1) ++ (freeAlpha t2)
+freeAlpha (Alpha x) = [x]
+freeAlpha _ = []
 
 {- Instantiation -}
 instantiate :: Maybe TypeScheme -> Type
