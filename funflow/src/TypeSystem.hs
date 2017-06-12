@@ -2,7 +2,7 @@ module TypeSystem where
 
 import Ast
 import Control.Monad.State.Lazy (State, get, put)
-import Data.List (find)
+import Data.List (find, intercalate)
 import qualified Data.Map as Map
 import Data.Map (Map)
 import Data.Maybe (fromJust)
@@ -23,44 +23,60 @@ envAppend' :: [(Name, TypeScheme)] -> TypeEnv -> TypeEnv
 envAppend' new = ((reverse new) ++)
 
 envSubstitute :: TypeSubstitution -> TypeEnv -> TypeEnv
-envSubstitute subs env = undefined
+envSubstitute subs env = map (\(n, ts) -> (n, applyOnScheme ts)) env
+    where
+    newSub :: Set Int -> TypeSubstitution
+    newSub as = \t -> if Set.notMember t (Set.map Alpha as)
+                      then subs t
+                      else t
+    applyOnScheme :: TypeScheme -> TypeScheme
+    applyOnScheme (TypeScheme as t) = TypeScheme as (applyOnType (newSub as) t)
+    applyOnType :: TypeSubstitution -> Type -> Type
+    applyOnType ns (TypeInteger) = TypeInteger
+    applyOnType ns (TypeBool) = TypeBool
+    applyOnType ns (TypeFn t1 t2) = TypeFn (applyOnType ns t1) (applyOnType ns t2)
+    applyOnType ns a@(Alpha x) = ns a
 
 {- Substitutions -}
 type TypeSubstitution = Type -> Type
 
-substitute :: Type -> Type -> TypeSubstitution
-substitute t1 t2 k = if k == t1 then t2 else k
+substitute :: Int -> Type -> TypeSubstitution
+substitute x t2 k = if k == Alpha x then t2 else k
 
 {- Other stuff -}
 data Type = TypeInteger
           | TypeBool
           | TypeFn Type Type
           | Alpha Int
-          deriving (Eq, Show)
+          deriving (Eq, Ord)
 
 data TypeScheme = TypeScheme (Set Int) Type
 
+instance Show TypeScheme where
+    show (TypeScheme as t) = "forall " ++ intercalate " " (map show (Set.toList as)) ++ ". " ++ show t
+
+instance Show Type where
+    show (TypeInteger) = "Int"
+    show (TypeBool) = "Bool"
+    show (TypeFn t1 t2) = show t1 ++ " -> " ++ show t2
+    show (Alpha a) = show a
+
 {- Generalization -}
 generalize :: TypeEnv -> Type -> TypeScheme
-generalize = undefined
--- generalize env t = foldr (\a ts -> ForAll a ts) (SchemeType t) (freeAlpha t)
-
-{-
-    Search all alpha's in Type
-    Strip names that correspond to a TypeEnv entry
-    Create Foralls vor other alpha's
--}
-
-freeAlpha :: Type -> [Int]
-freeAlpha (TypeFn t1 t2) = (freeAlpha t1) ++ (freeAlpha t2)
-freeAlpha (Alpha x) = [x]
-freeAlpha _ = []
+generalize env t = TypeScheme (Set.difference (freeInType t) (freeInEnv env)) t
+    where
+    freeInType :: Type -> Set Int
+    freeInType (TypeFn t1 t2) = Set.union (freeInType t1) (freeInType t2)
+    freeInType (Alpha x) = Set.singleton x
+    freeInType _ = Set.empty
+    freeInScheme :: TypeScheme -> Set Int
+    freeInScheme (TypeScheme as t) = Set.difference (freeInType t) as
+    freeInEnv :: TypeEnv -> Set Int
+    freeInEnv = foldr (\(n, ts) acc -> Set.union acc $ freeInScheme ts) Set.empty
 
 {- Instantiation -}
 instantiate :: TypeScheme -> State Int Type
-instantiate (TypeScheme as t) = do
-    d <- dict
-    return $ inst d t
+instantiate (TypeScheme as t) = inst <$> dict <*> pure t
     where
     dict :: State Int (Map Int Type)
     dict = do
@@ -82,7 +98,7 @@ unify (TypeFn t1 t2) (TypeFn t3 t4) = subs2 . subs1
     where
     subs1 = unify t1 t3
     subs2 = unify (subs1 t2) (subs1 t4)
-unify a@(Alpha x) t = if not (x `isFreeIn` t) then substitute a t else unifyFailure a t
+unify (Alpha x) t = if not (x `isFreeIn` t) then substitute x t else unifyFailure x t
 unify t a@(Alpha x) = unify a t
 unify t1 t2 = unifyFailure t1 t2
 
