@@ -9,10 +9,13 @@ import Parsing
 import TypeSystem
 import Control.Monad.State.Lazy (runState)
 import Data.Set (Set)
+import qualified Data.Map as Map
 import Data.Map (Map)
 
 import System.Environment (getArgs)
 import System.Console.Docopt (Arguments, Docopt, Option, docopt, parseArgs, exitWithUsage, exitWithUsageMessage, getArgOrExitWith, argument, isPresent, command)
+
+import qualified Debug.Trace as Debug
 
 usage :: Docopt
 usage = [docopt|
@@ -37,15 +40,14 @@ main = do
 run :: String -> IO ()
 run name = do
   p <- parse name
-  let types = runState (w [] p) 0
   putStrLn (show p)
+  let types = Debug.traceShowId $ runState (w Map.empty p) 0
   putStrLn $ show $ fst $ fst types
   return ()
 
 -- |Parse and label program
 parse :: String -> IO Expr
-parse programName = do
-  let fileName = programName++".fun"
+parse fileName = do
   content <- readFile fileName
   return (parseExpr content)
 
