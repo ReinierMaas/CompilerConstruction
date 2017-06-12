@@ -2,6 +2,7 @@ module TypeSystem where
 
 import Ast
 import Control.Monad.State.Lazy (State, get, put)
+import Data.Function (fix)
 import Data.List (find, intercalate)
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -25,25 +26,36 @@ envAppend' :: [(Name, TypeScheme)] -> TypeEnv -> TypeEnv
 envAppend' new = ((reverse new) ++)
 
 envSubstitute :: TypeSubstitution -> TypeEnv -> TypeEnv
-envSubstitute subs env = map (\(n, ts) -> (n, applyOnScheme ts)) env
+envSubstitute sub env = map (\(n, ts) -> (n, applyOnScheme ts)) env
     where
-    newSub :: Set Int -> TypeSubstitution
-    newSub as = \t -> if Set.notMember t (Set.map Alpha as)
-                      then subs t
-                      else t
     applyOnScheme :: TypeScheme -> TypeScheme
-    applyOnScheme (TypeScheme as t) = TypeScheme as (applyOnType (newSub as) t)
+    applyOnScheme (TypeScheme as t) = TypeScheme as (applyOnType (substituteMany as sub) t)
     applyOnType :: TypeSubstitution -> Type -> Type
     applyOnType ns (TypeInteger) = TypeInteger
     applyOnType ns (TypeBool) = TypeBool
     applyOnType ns (TypeFn t1 t2) = TypeFn (applyOnType ns t1) (applyOnType ns t2)
-    applyOnType ns a@(Alpha x) = ns a
+    applyOnType ns a@(Alpha x) = ns -$- a
 
 {- Substitutions -}
-type TypeSubstitution = Type -> Type
+newtype TypeSubstitution = TypeSubstitution (Map Int Type)
+
+(-.-) :: TypeSubstitution -> TypeSubstitution -> TypeSubstitution
+(-.-) (TypeSubstitution m1) (TypeSubstitution m2) = TypeSubstitution (Map.union m1 m2)
+
+(-$-) :: TypeSubstitution -> Type -> Type
+(-$-) (TypeSubstitution map) (Alpha t) = case Map.lookup t map of
+                                            Just t' -> t'
+                                            Nothing -> Alpha t
+(-$-) _ t = t
+
+idSub :: TypeSubstitution
+idSub = TypeSubstitution Map.empty
+
+substituteMany :: Set Int -> TypeSubstitution -> TypeSubstitution
+substituteMany as ts = TypeSubstitution (Map.fromSet Alpha as) -.- ts
 
 substitute :: Int -> Type -> TypeSubstitution
-substitute x t2 k = if k == Alpha x then t2 else k
+substitute x t2 = TypeSubstitution $ Map.singleton x t2
 
 {- Other stuff -}
 data Type = TypeInteger
@@ -94,12 +106,12 @@ instantiate (TypeScheme as t) = inst <$> dict <*> pure t
 
 {- Unification -}
 unify :: Type -> Type -> TypeSubstitution
-unify TypeInteger TypeInteger = id
-unify TypeBool TypeBool = id
-unify (TypeFn t1 t2) (TypeFn t3 t4) = subs2 . subs1
+unify TypeInteger TypeInteger = idSub
+unify TypeBool TypeBool = idSub
+unify (TypeFn t1 t2) (TypeFn t3 t4) = subs2 -.- subs1
     where
     subs1 = unify t1 t3
-    subs2 = unify (subs1 t2) (subs1 t4)
+    subs2 = unify (subs1 -$- t2) (subs1 -$- t4)
 unify (Alpha x) t = if not (x `isFreeIn` t) then substitute x t else unifyFailure x t
 unify t a@(Alpha x) = unify a t
 unify t1 t2 = unifyFailure t1 t2
@@ -119,52 +131,52 @@ fresh = do
     return $ Alpha x
 
 w :: TypeEnv -> Expr -> State Int (Type, TypeSubstitution)
-w _ (Integer _) = return (TypeInteger, id)
-w _ (Bool _) = return (TypeBool, id)
+w _ (Integer _) = return (TypeInteger, idSub)
+w _ (Bool _) = return (TypeBool, idSub)
 w env (Var x) = case envLookup x env of
                     Just ts -> do
                         t <- instantiate ts
-                        return (t, id)
+                        return (t, idSub)
                     Nothing -> error $ "x : " ++ show x ++ " not found in environment"  -- See slides on page 24. Unclear how to implement.
 w env (Fn pi x t1) = do
     a1 <- fresh
     (t2, subs) <- w (envAppend x (TypeScheme Set.empty a1) env) t1
-    return $ (TypeFn (subs a1) t2, subs)
+    return $ (TypeFn (subs -$- a1) t2, subs)
 w env (Fun pi f x t1) = do
     a1 <- fresh
     a2 <- fresh
     (t2, subs1) <- w (envAppend' [(f, TypeScheme Set.empty (TypeFn a1 a2)), (x, TypeScheme Set.empty a1)] env) t1
-    let subs2 = unify t2 (subs1 a2)
-    return (TypeFn (subs2 (subs1 a1)) (subs2 t2), subs2 . subs1)
+    let subs2 = unify t2 (subs1 -$- a2)
+    return (TypeFn (subs2 -$- (subs1 -$- a1)) (subs2 -$- t2), subs2 -.- subs1)
 w env (App term1 term2) = do
     (t1, subs1) <- w env term1
     (t2, subs2) <- w (envSubstitute subs1 env) term2
     a <- fresh
-    let subs3 = unify (subs2 t1) (TypeFn t2 a)
-    return (subs3 a, subs3 . subs2 . subs1)
+    let subs3 = unify (subs2 -$- t1) (TypeFn t2 a)
+    return (subs3 -$- a, subs3 -.- subs2 -.- subs1)
 w env (ITE term1 term2 term3) = do
     (t1, subs1) <- w env term1
     let env = envSubstitute subs1 env
     (t2, subs2) <- w env term2
     let env = envSubstitute subs2 env
     (t3, subs3) <- w env term3
-    let subs4 = unify (subs3 (subs2 t1)) TypeBool
-    let subs5 = unify (subs4 (subs3 t2)) (subs4 t3)
-    return (subs5 (subs4 t3), subs5 . subs4 . subs3 . subs2 . subs1)
+    let subs4 = unify (subs3 -$- (subs2 -$- t1)) TypeBool
+    let subs5 = unify (subs4 -$- (subs3 -$- t2)) (subs4 -$- t3)
+    return (subs5 -$- (subs4 -$- t3), subs5 -.- subs4 -.- subs3 -.- subs2 -.- subs1)
 w env (Let x term1 term2) = do
-    (t1, subs1) <- w env term1 -- term1: 42
+    (t1, subs1) <- w env term1 -- term1: identity function
     let env = envSubstitute subs1 env
     let env = envAppend x (generalize env t1) env
-    (t2, subs2) <- w env term2 -- term2: ITE
-    return (t2, subs2 . subs1)
+    (t2, subs2) <- w env term2 -- term2: var use
+    return (t2, subs2 -.- subs1)
 w env (Oper op term1 term2) = do
     (t1, subs1) <- w env term1
     let env = envSubstitute subs1 env
     (t2, subs2) <- w env term2
     let (param1, param2, ret) = opTypes op
-    let subs3 = unify (subs2 t1) param1
-    let subs4 = unify (subs3 t2) param2
-    return (ret, subs4 . subs3 . subs2 . subs1)
+    let subs3 = unify (subs2 -$- t1) param1
+    let subs4 = unify (subs3 -$- t2) param2
+    return (ret, subs4 -.- subs3 -.- subs2 -.- subs1)
 
 opTypes :: Op -> (Type, Type, Type)
 opTypes op | op `elem` [Add, Sub, Mul, Div] = (TypeInteger, TypeInteger, TypeInteger)
