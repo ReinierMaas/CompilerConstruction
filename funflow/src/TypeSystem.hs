@@ -3,7 +3,12 @@ module TypeSystem where
 import Ast
 import Control.Monad.State.Lazy (State, get, put)
 import Data.List (find)
+import qualified Data.Map as Map
+import Data.Map (Map)
 import Data.Maybe (fromJust)
+import Data.Either (Either(..))
+import qualified Data.Set as Set
+import Data.Set (Set)
 
 {- Environment -}
 type TypeEnv = [(Name, TypeScheme)]
@@ -33,12 +38,12 @@ data Type = TypeInteger
           | Alpha Int
           deriving (Eq, Show)
 
-data TypeScheme = SchemeType Type
-                | ForAll Int TypeScheme
+data TypeScheme = TypeScheme (Set Int) Type
 
 {- Generalization -}
 generalize :: TypeEnv -> Type -> TypeScheme
-generalize env t = foldr (\a ts -> ForAll a ts) (SchemeType t) (freeAlpha t)
+generalize = undefined
+-- generalize env t = foldr (\a ts -> ForAll a ts) (SchemeType t) (freeAlpha t)
 
 {-
     Search all alpha's in Type
@@ -52,8 +57,22 @@ freeAlpha (Alpha x) = [x]
 freeAlpha _ = []
 
 {- Instantiation -}
-instantiate :: Maybe TypeScheme -> Type
-instantiate = undefined
+instantiate :: TypeScheme -> State Int Type
+instantiate (TypeScheme as t) = do
+    d <- dict
+    return $ inst d t
+    where
+    dict :: State Int (Map Int Type)
+    dict = do
+        freshs <- sequence $ repeat fresh
+        return $ Map.fromList $ zip (Set.toList as) freshs
+    inst :: Map Int Type -> Type -> Type
+    inst d TypeInteger = TypeInteger
+    inst d TypeBool = TypeBool
+    inst d alpha@(Alpha a) = case Map.lookup a d of
+                                        Nothing -> alpha
+                                        Just b -> b
+    inst d (TypeFn a b) = TypeFn (inst d a) (inst d b)
 
 {- Unification -}
 unify :: Type -> Type -> TypeSubstitution
@@ -84,15 +103,19 @@ fresh = do
 w :: TypeEnv -> Expr -> State Int (Type, TypeSubstitution)
 w _ (Integer _) = return (TypeInteger, id)
 w _ (Bool _) = return (TypeBool, id)
-w env (Var x) = return (instantiate (envLookup x env), id) -- See slides on page 24. Unclear how to implement.
+w env (Var x) = case envLookup x env of
+                    Just ts -> do
+                        t <- instantiate ts
+                        return (t, id)
+                    Nothing -> error $ "x : " ++ show x ++ " not found in environment"  -- See slides on page 24. Unclear how to implement.
 w env (Fn pi x t1) = do
     a1 <- fresh
-    (t2, subs) <- w (envAppend x (SchemeType a1) env) t1
+    (t2, subs) <- w (envAppend x (TypeScheme Set.empty a1) env) t1
     return $ (TypeFn (subs a1) t2, subs)
 w env (Fun pi f x t1) = do
     a1 <- fresh
     a2 <- fresh
-    (t2, subs1) <- w (envAppend' [(f, SchemeType (TypeFn a1 a2)), (x, SchemeType a1)] env) t1
+    (t2, subs1) <- w (envAppend' [(f, TypeScheme Set.empty (TypeFn a1 a2)), (x, TypeScheme Set.empty a1)] env) t1
     let subs2 = unify t2 (subs1 a2)
     return (TypeFn (subs2 (subs1 a1)) (subs2 t2), subs2 . subs1)
 w env (App term1 term2) = do
