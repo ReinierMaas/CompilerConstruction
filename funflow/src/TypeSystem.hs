@@ -10,6 +10,8 @@ import Data.Either (Either(..))
 import qualified Data.Set as Set
 import Data.Set (Set)
 
+import qualified Debug.Trace as Debug
+
 {- Environment -}
 type TypeEnv = [(Name, TypeScheme)]
 
@@ -59,7 +61,7 @@ instance Show Type where
     show (TypeInteger) = "Int"
     show (TypeBool) = "Bool"
     show (TypeFn t1 t2) = show t1 ++ " -> " ++ show t2
-    show (Alpha a) = show a
+    show (Alpha a) = "a" ++ show a
 
 {- Generalization -}
 generalize :: TypeEnv -> Type -> TypeScheme
@@ -150,10 +152,10 @@ w env (ITE term1 term2 term3) = do
     let subs5 = unify (subs4 (subs3 t2)) (subs4 t3)
     return (subs5 (subs4 t3), subs5 . subs4 . subs3 . subs2 . subs1)
 w env (Let x term1 term2) = do
-    (t1, subs1) <- w env term1
+    (t1, subs1) <- w env term1 -- term1: 42
     let env = envSubstitute subs1 env
     let env = envAppend x (generalize env t1) env
-    (t2, subs2) <- w env term2
+    (t2, subs2) <- w env term2 -- term2: ITE
     return (t2, subs2 . subs1)
 w env (Oper op term1 term2) = do
     (t1, subs1) <- w env term1
