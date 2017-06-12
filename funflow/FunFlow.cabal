@@ -1,3 +1,4 @@
+
 name          : FunFlow
 version       : 0.2.0.0
 synopsis      : Control-flow analysis of a simple functional programming language.
@@ -9,12 +10,16 @@ category      : Language
 build-type    : Simple
 cabal-version : >= 1.8
 
-library
-  exposed-modules : Main
-                  , Ast
+executable funflow
+  main-is         : Main.hs
+  other-modules   : Ast
                   , Parsing
                   , TypeSystem
-  build-depends   : base >= 4.5, uu-parsinglib >= 2.8, monad-supply >= 0.3,
-                    mtl >= 2.1, containers >= 0.5
+  build-depends   : base >= 4.5
+                  , uu-parsinglib >= 2.8
+                  , monad-supply >= 0.3
+                  , docopt == 0.7.0.5
+                  , mtl >= 2.1, containers >= 0.5
   hs-source-dirs  : src
+  extensions:          DoAndIfThenElse
 
