@@ -4,11 +4,11 @@ data Op
   = Add | Sub | Mul | Div
   deriving (Eq,Show)
 
-type Pi    = Integer -- For numbering lambda's etc. that can then be tracked in the analysis
+type Pi    = Int -- For numbering lambda's etc. that can then be tracked in the analysis
 type Name  = String  -- For identifier names
 
 data Expr
-  = Integer Integer
+  = Int Int
   | Bool    Bool
   | Var     Name
   | Fun     Pi   Name Name Expr
