@@ -106,7 +106,7 @@ instantiate (TypeScheme as t) = inst <$> dict <*> pure t
 
 {- Unification -}
 unify :: Type -> Type -> TypeSubstitution
-unify = fromEither . tryUnify
+unify t1 t2 = fromEither $ tryUnify t1 t2
     where
     fromEither (Left s) = error s
     fromEither (Right r) = r
@@ -115,15 +115,17 @@ tryUnify :: Type -> Type -> Either String TypeSubstitution
 tryUnify TypeInteger TypeInteger = Right idSub
 tryUnify TypeBool TypeBool = Right idSub
 tryUnify (Alpha x) (Alpha y) = Right $ substitute x (Alpha y)
-tryUnify (TypeFn t1 t2) (TypeFn t3 t4) = Right $ subs2 -.- subs1
-    where
-    subs1 = tryUnify t1 t3
-    subs2 = tryUnify (subs1 -$- t2) (subs1 -$- t4)
-tryUnify (Alpha x) t = if not (x `isFreeIn` t) then Right (substitute x t) else unifyFailure (Alpha x) t
+tryUnify (TypeFn t1 t2) (TypeFn t3 t4) = do
+    subs1 <- tryUnify t1 t3
+    subs2 <- tryUnify (subs1 -$- t2) (subs1 -$- t4)
+    Right $ subs2 -.- subs1
+tryUnify (Alpha x) t = if not (x `isFreeIn` t)
+                       then Right (substitute x t)
+                       else unifyFailure (Alpha x) t
 tryUnify t a@(Alpha x) = tryUnify a t
 tryUnify t1 t2 = unifyFailure t1 t2
 
-unifyFailure t1 t2 = "Unable to unify " ++ show t1 ++ " and " ++ show t2
+unifyFailure t1 t2 = Left $ "Unable to unify " ++ show t1 ++ " and " ++ show t2
 
 isFreeIn :: Int -> Type -> Bool
 isFreeIn x (TypeFn t1 t2) = isFreeIn x t1 || isFreeIn x t2
@@ -175,8 +177,7 @@ w env (ITE term1 term2 term3) = do
 w env (Let x term1 term2) = do
     (t1, subs1) <- w env term1 -- term1: 42 :: Integer
     let env1 = envSubstitute subs1 env
-    let env2 = envAppend x (generalize env1 t1) env1
-    z <- Debug.traceShowM env2
+    let env2 = debug $ envAppend x (generalize env1 t1) env1
     (t2, subs2) <- w env2 term2 -- term2: ITE
     return $ debug $ (t2, subs2 -.- subs1)
 w env (Oper op term1 term2) = do
@@ -193,4 +194,4 @@ opTypes op | op `elem` [Add, Sub, Mul, Div] = (TypeInteger, TypeInteger, TypeInt
            | otherwise = error "This is impossible"
 
 debug :: Show a => a -> a
-debug = Debug.traceShowId
+debug = id --Debug.traceShowId

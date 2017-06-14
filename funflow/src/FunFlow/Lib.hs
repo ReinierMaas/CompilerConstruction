@@ -13,7 +13,7 @@ run name = putStrLn =<< show <$> typeCheck name
 typeCheck :: String -> IO Type
 typeCheck name = do
   p <- parse name
-  putStrLn (show p)
+  --putStrLn (show p)
   let types = runState (w Map.empty p) 0
   return $ fst $ fst types
 

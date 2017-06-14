@@ -1,5 +1,5 @@
-import Test.QuickCheck
 import FunFlow.Lib
+import FunFlow.TypeSystem
 
 examples :: [(String, Type)]
 examples = [ ("add", TypeInteger)
@@ -15,8 +15,15 @@ examples = [ ("add", TypeInteger)
 
 main :: IO ()
 main = do
-    map checkExample examples
+    results <- sequence $ map checkExample examples
+    let succeed = length $ filter id results
+    let total = length examples
+    putStrLn $ "Passed " ++ show succeed ++ " of " ++ show total ++ " tests"
 
 checkExample :: (String, Type) -> IO Bool
-checkExample (path, expectedType) = do
+checkExample (name, expectedType) = do
+    let path = "examples/" ++ name ++ ".fun"
     t <- typeCheck path
+    case tryUnify t expectedType of
+        Right _ -> return True
+        Left err -> putStrLn err >> return False
