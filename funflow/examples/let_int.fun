@@ -1,1 +1,1 @@
-let i = 42 in i + 2
+let i = 42 in 2

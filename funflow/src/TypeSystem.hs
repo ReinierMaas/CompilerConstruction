@@ -1,5 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
-
 module TypeSystem where
 
 import Ast
@@ -28,15 +26,15 @@ envAppend' :: [(Name, TypeScheme)] -> TypeEnv -> TypeEnv
 envAppend' new env = foldr (\(n,ts) acc -> envAppend n ts acc) env (reverse new)
 
 envSubstitute :: TypeSubstitution -> TypeEnv -> TypeEnv
-envSubstitute sub env = debug $! Map.map applyOnScheme (debug $! env)
+envSubstitute sub env = Map.map applyOnScheme env
     where
     applyOnScheme :: TypeScheme -> TypeScheme
-    applyOnScheme (TypeScheme as t) = debug $! TypeScheme (debug $! as) (applyOnType (substituteMany (debug $! as) (debug $! sub)) (debug $! t))
+    applyOnScheme (TypeScheme as t) = TypeScheme as (applyOnType (substituteMany as sub) t)
     applyOnType :: TypeSubstitution -> Type -> Type
-    applyOnType ns (TypeInteger) = debug $! TypeInteger
-    applyOnType ns (TypeBool) = debug $! TypeBool
-    applyOnType ns (TypeFn t1 t2) = debug $! TypeFn (applyOnType ns t1) (applyOnType ns t2)
-    applyOnType ns a@(Alpha x) = debug $! ns -$- a
+    applyOnType ns (TypeInteger) = TypeInteger
+    applyOnType ns (TypeBool) = TypeBool
+    applyOnType ns (TypeFn t1 t2) = TypeFn (applyOnType ns t1) (applyOnType ns t2)
+    applyOnType ns a@(Alpha x) = ns -$- a
 
 {- Substitutions -}
 newtype TypeSubstitution = TypeSubstitution (Map Int Type) deriving (Show)
@@ -45,7 +43,7 @@ newtype TypeSubstitution = TypeSubstitution (Map Int Type) deriving (Show)
 (-.-) (TypeSubstitution m1) (TypeSubstitution m2) = TypeSubstitution (Map.union m1 m2)
 
 (-$-) :: TypeSubstitution -> Type -> Type
-(-$-) (TypeSubstitution map) (Alpha t) = case Map.lookup t map of
+(-$-) (TypeSubstitution m) (Alpha t) = case Map.lookup t m of
                                             Just t' -> t'
                                             Nothing -> Alpha t
 (-$-) _ t = t
@@ -57,7 +55,7 @@ substituteMany :: Set Int -> TypeSubstitution -> TypeSubstitution
 substituteMany as ts = TypeSubstitution (Map.fromSet Alpha as) -.- ts
 
 substitute :: Int -> Type -> TypeSubstitution
-substitute x t2 = debug $! TypeSubstitution $! Map.singleton x t2
+substitute x t2 = TypeSubstitution $ Map.singleton x t2
 
 {- Other stuff -}
 data Type = TypeInteger
@@ -79,16 +77,16 @@ instance Show Type where
 
 {- Generalization -}
 generalize :: TypeEnv -> Type -> TypeScheme
-generalize env t = TypeScheme (Set.difference (freeInType t) (freeInEnv $! debug env)) t
+generalize env t = TypeScheme (Set.difference (freeInType t) (freeInEnv env)) t
     where
     freeInType :: Type -> Set Int
     freeInType (TypeFn t1 t2) = Set.union (freeInType t1) (freeInType t2)
     freeInType (Alpha x) = Set.singleton x
     freeInType _ = Set.empty
     freeInScheme :: TypeScheme -> Set Int
-    freeInScheme (TypeScheme as t) = Set.difference (freeInType t) as
+    freeInScheme (TypeScheme as t1) = Set.difference (freeInType t1) as
     freeInEnv :: TypeEnv -> Set Int
-    freeInEnv = foldr (\ts acc -> Set.union acc $! freeInScheme ts) Set.empty
+    freeInEnv = foldr (\ts acc -> Set.union acc $ freeInScheme ts) Set.empty
 
 {- Instantiation -}
 instantiate :: TypeScheme -> State Int Type
@@ -96,8 +94,8 @@ instantiate (TypeScheme as t) = inst <$> dict <*> pure t
     where
     dict :: State Int (Map Int Type)
     dict = do
-        freshs <- sequence $! repeat fresh
-        return $! Map.fromList $! zip (Set.toList as) freshs
+        freshs <- sequence $ take (Set.size as) $ repeat fresh
+        return $ Map.fromList $ zip (Set.toList as) freshs
     inst :: Map Int Type -> Type -> Type
     inst d TypeInteger = TypeInteger
     inst d TypeBool = TypeBool
@@ -118,7 +116,7 @@ unify (Alpha x) t = if not (x `isFreeIn` t) then substitute x t else unifyFailur
 unify t a@(Alpha x) = unify a t
 unify t1 t2 = unifyFailure t1 t2
 
-unifyFailure t1 t2 = error $! "Unable to unify " ++ show t1 ++ " and " ++ show t2
+unifyFailure t1 t2 = error $ "Unable to unify " ++ show t1 ++ " and " ++ show t2
 
 isFreeIn :: Int -> Type -> Bool
 isFreeIn x (TypeFn t1 t2) = isFreeIn x t1 || isFreeIn x t2
@@ -129,73 +127,63 @@ isFreeIn _ _ = False
 fresh :: State Int Type
 fresh = do
     x <- get
-    put $! x + 1
-    return $! Alpha x
+    put $ x + 1
+    return $ Alpha x
 
 w :: TypeEnv -> Expr -> State Int (Type, TypeSubstitution)
 w env (Integer _) =  do
-    !z <- Debug.traceShowM env
-    return $! debug $! (TypeInteger, idSub)
+    return $ debug $ (TypeInteger, idSub)
 w env (Bool _) =  do
-    !z <- Debug.traceShowM env
-    return $! debug $! (TypeBool, idSub)
+    return $ debug $ (TypeBool, idSub)
 w env (Var x) = case envLookup x env of
                     Just ts -> do
-                        t <- instantiate $! debug $! ts
-                        return $! debug $! (t, idSub)
-                    Nothing -> error $! "x : " ++ show x ++ " not found in environment"  -- See slides on page 24. Unclear how to implement.
-w env (Fn pi x t1) = do
-    !z <- Debug.traceShowM env
-    !a1 <- fresh
-    !(t2, subs) <- w (envAppend x (TypeScheme Set.empty a1) env) t1
-    return $! debug $! (TypeFn (subs -$- a1) t2, subs)
-w env (Fun pi f x t1) = do
-    !z <- Debug.traceShowM env
-    !a1 <- fresh
-    !a2 <- fresh
-    !(t2, subs1) <- w (envAppend' [(f, TypeScheme Set.empty (TypeFn a1 a2)), (x, TypeScheme Set.empty a1)] env) t1
-    let !subs2 = debug $! unify t2 (subs1 -$- a2)
-    return $! debug $! (TypeFn (subs2 -$- (subs1 -$- a1)) (subs2 -$- t2), subs2 -.- subs1)
+                        t <- instantiate ts
+                        return $ debug $ (t, idSub)
+                    Nothing -> error $ "x : " ++ show x ++ " not found in environment"  -- See slides on page 24. Unclear how to implement.
+w env (Fn p x t1) = do
+    a1 <- fresh
+    (t2, subs) <- w (envAppend x (TypeScheme Set.empty a1) env) t1
+    return $ debug $ (TypeFn (subs -$- a1) t2, subs)
+w env (Fun p f x t1) = do
+    a1 <- fresh
+    a2 <- fresh
+    (t2, subs1) <- w (envAppend' [(f, TypeScheme Set.empty (TypeFn a1 a2)), (x, TypeScheme Set.empty a1)] env) t1
+    let subs2 = unify t2 (subs1 -$- a2)
+    return $ debug $ (TypeFn (subs2 -$- (subs1 -$- a1)) (subs2 -$- t2), subs2 -.- subs1)
 w env (App term1 term2) = do
-    !z <- Debug.traceShowM env
-    !(t1, subs1) <- w env term1
-    !(t2, subs2) <- w (envSubstitute subs1 env) term2
-    !a <- fresh
-    let !subs3 = debug $! unify (subs2 -$- t1) (TypeFn t2 a)
-    return $! debug $! (subs3 -$- a, subs3 -.- subs2 -.- subs1)
+    (t1, subs1) <- w env term1
+    (t2, subs2) <- w (envSubstitute subs1 env) term2
+    a <- fresh
+    let subs3 = unify (subs2 -$- t1) (TypeFn t2 a)
+    return $ debug $ (subs3 -$- a, subs3 -.- subs2 -.- subs1)
 w env (ITE term1 term2 term3) = do
-    !z <- Debug.traceShowM env
-    !(t1, subs1) <- w env term1
-    let !env = debug $! envSubstitute subs1 env
-    !(t2, subs2) <- w env term2
-    let !env = debug $! envSubstitute subs2 env
-    !(t3, subs3) <- w env term3
-    let !subs4 = debug $! unify (subs3 -$- (subs2 -$- t1)) TypeBool
-    let !subs5 = debug $! unify (subs4 -$- (subs3 -$- t2)) (subs4 -$- t3)
-    return $! debug $! (subs5 -$- (subs4 -$- t3), subs5 -.- subs4 -.- subs3 -.- subs2 -.- subs1)
+    (t1, subs1) <- w env term1
+    let env1 = envSubstitute subs1 env
+    (t2, subs2) <- w env1 term2
+    let env2 = envSubstitute subs2 env1
+    (t3, subs3) <- w env2 term3
+    let subs4 = unify (subs3 -$- (subs2 -$- t1)) TypeBool
+    let subs5 = unify (subs4 -$- (subs3 -$- t2)) (subs4 -$- t3)
+    return $ debug $ (subs5 -$- (subs4 -$- t3), subs5 -.- subs4 -.- subs3 -.- subs2 -.- subs1)
 w env (Let x term1 term2) = do
-    !z <- Debug.traceShowM env
-    !(t1, subs1) <- w (debug $! env) (debug $! term1) -- term1: 42 :: Integer
-    !z <- Debug.traceShowM env -- env is fromList[]
-    !z <- Debug.traceShowM subs1 -- env is fromList[]
-    let !env = debug $! envSubstitute (debug $! subs1) (debug $! env)
-    let !env = debug $! envAppend x (generalize env t1) env
-    !(t2, subs2) <- w env term2 -- term2: ITE
-    return $! debug $! (t2, subs2 -.- subs1)
+    (t1, subs1) <- w env term1 -- term1: 42 :: Integer
+    let env1 = envSubstitute subs1 env
+    let env2 = envAppend x (generalize env1 t1) env1
+    z <- Debug.traceShowM env2
+    (t2, subs2) <- w env2 term2 -- term2: ITE
+    return $ debug $ (t2, subs2 -.- subs1)
 w env (Oper op term1 term2) = do
-    !z <- Debug.traceShowM env
-    !(t1, subs1) <- w env term1
-    let !env = debug $! envSubstitute subs1 env
-    !(t2, subs2) <- w env term2
-    let !(param1, param2, ret) = debug $ opTypes op
-    let !subs3 = debug $! unify (subs2 -$- t1) param1
-    let !subs4 = debug $! unify (subs3 -$- t2) param2
-    return $! debug $! (ret, subs4 -.- subs3 -.- subs2 -.- subs1)
+    (t1, subs1) <- w env term1
+    let env1 = envSubstitute subs1 env
+    (t2, subs2) <- w env1 term2
+    let (param1, param2, ret) = opTypes op
+    let subs3 = unify (subs2 -$- t1) param1
+    let subs4 = unify (subs3 -$- t2) param2
+    return $ debug $ (ret, subs4 -.- subs3 -.- subs2 -.- subs1)
 
 opTypes :: Op -> (Type, Type, Type)
 opTypes op | op `elem` [Add, Sub, Mul, Div] = (TypeInteger, TypeInteger, TypeInteger)
            | otherwise = error "This is impossible"
-
 
 debug :: Show a => a -> a
 debug = Debug.traceShowId
