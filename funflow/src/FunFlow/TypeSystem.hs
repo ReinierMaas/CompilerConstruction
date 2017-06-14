@@ -1,6 +1,6 @@
-module TypeSystem where
+module FunFlow.TypeSystem where
 
-import Ast
+import FunFlow.Ast
 import Control.Monad.State.Lazy (State, get, put)
 import Data.Function (fix)
 import Data.List (find, intercalate)
@@ -106,18 +106,24 @@ instantiate (TypeScheme as t) = inst <$> dict <*> pure t
 
 {- Unification -}
 unify :: Type -> Type -> TypeSubstitution
-unify TypeInteger TypeInteger = idSub
-unify TypeBool TypeBool = idSub
-unify (Alpha x) (Alpha y) = substitute x (Alpha y)
-unify (TypeFn t1 t2) (TypeFn t3 t4) = subs2 -.- subs1
+unify = fromEither . tryUnify
     where
-    subs1 = unify t1 t3
-    subs2 = unify (subs1 -$- t2) (subs1 -$- t4)
-unify (Alpha x) t = if not (x `isFreeIn` t) then substitute x t else unifyFailure (Alpha x) t
-unify t a@(Alpha x) = unify a t
-unify t1 t2 = unifyFailure t1 t2
+    fromEither (Left s) = error s
+    fromEither (Right r) = r
 
-unifyFailure t1 t2 = error $ "Unable to unify " ++ show t1 ++ " and " ++ show t2
+tryUnify :: Type -> Type -> Either String TypeSubstitution
+tryUnify TypeInteger TypeInteger = Right idSub
+tryUnify TypeBool TypeBool = Right idSub
+tryUnify (Alpha x) (Alpha y) = Right $ substitute x (Alpha y)
+tryUnify (TypeFn t1 t2) (TypeFn t3 t4) = Right $ subs2 -.- subs1
+    where
+    subs1 = tryUnify t1 t3
+    subs2 = tryUnify (subs1 -$- t2) (subs1 -$- t4)
+tryUnify (Alpha x) t = if not (x `isFreeIn` t) then Right (substitute x t) else unifyFailure (Alpha x) t
+tryUnify t a@(Alpha x) = tryUnify a t
+tryUnify t1 t2 = unifyFailure t1 t2
+
+unifyFailure t1 t2 = "Unable to unify " ++ show t1 ++ " and " ++ show t2
 
 isFreeIn :: Int -> Type -> Bool
 isFreeIn x (TypeFn t1 t2) = isFreeIn x t1 || isFreeIn x t2

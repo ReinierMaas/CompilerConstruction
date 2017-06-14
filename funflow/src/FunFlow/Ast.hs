@@ -1,4 +1,4 @@
-module Ast where
+module FunFlow.Ast where
 
 data Op
   = Add | Sub | Mul | Div

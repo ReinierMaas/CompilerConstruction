@@ -3,9 +3,9 @@
 
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Parsing where
+module FunFlow.Parsing where
 
-import Ast
+import FunFlow.Ast
 
 import Prelude hiding ( abs, sum )
 import Data.Char (isSpace)
@@ -23,28 +23,28 @@ parseExpr = runParser "stdin" pExpr
 pExpr :: Parser Expr
 pExpr = (pFn <|> pFun <|> pITE <|> pLet) <<|> pBin
   where
-  
+
   -- literal expressions
   pLit = Integer <$> pInteger
      <|> Bool True  <$ pSymbol "true"
      <|> Bool False <$ pSymbol "false"
-    
+
   -- atomic expressions
   pAtom = pLit
      <<|> Var <$> pIdent
      <<|> pParens pExpr
-  
+
   -- simple expressions
   pFn,pFun,pLet,pITE :: Parser Expr
   pFn     = iI (Fn 0) "fn" pIdent "=>" pExpr Ii -- Default Pi to 0
   pFun    = iI (Fun 0) "fun" pIdent pIdent "=>" pExpr Ii -- Dito
   pLet    = iI Let "let" pIdent "=" pExpr "in" pExpr Ii
   pITE    = iI ITE "if" pExpr "then" pExpr "else" pExpr Ii
-   
+
   -- chained expressions
   pApp = pChainl_ng (App <$ pSpaces) pAtom
   pBin = pChainl_ng (bin <$> pOper) pApp
-  
+
 pIdent,pConst,pOper :: Parser Name
 pIdent = lexeme $ (:) <$> pLower <*> pMany (pLetter <|> pDigit <|> pUnderscore)
 pConst = lexeme $ (:) <$> pUpper <*> pMany (pLetter <|> pDigit <|> pUnderscore)
