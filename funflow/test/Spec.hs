@@ -5,6 +5,8 @@ examples :: [(String, Type)]
 examples = [ ("add", TypeInteger)
            , ("apply_id", TypeInteger)
            , ("id", TypeFn (Alpha 0) (Alpha 0))
+           , ("fun_id", TypeFn (Alpha 0) (Alpha 0))
+           , ("fun_if", TypeFn (Alpha 0) (Alpha 0))
            , ("if_let", TypeInteger)
            , ("let_bool", TypeBool)
            , ("let_id", TypeFn (Alpha 0) (Alpha 0))
