@@ -108,11 +108,12 @@ instantiate (TypeScheme as t) = inst <$> dict <*> pure t
 unify :: Type -> Type -> TypeSubstitution
 unify TypeInteger TypeInteger = idSub
 unify TypeBool TypeBool = idSub
+unify (Alpha x) (Alpha y) = substitute x (Alpha y)
 unify (TypeFn t1 t2) (TypeFn t3 t4) = subs2 -.- subs1
     where
     subs1 = unify t1 t3
     subs2 = unify (subs1 -$- t2) (subs1 -$- t4)
-unify (Alpha x) t = if not (x `isFreeIn` t) then substitute x t else unifyFailure x t
+unify (Alpha x) t = if not (x `isFreeIn` t) then substitute x t else unifyFailure (Alpha x) t
 unify t a@(Alpha x) = unify a t
 unify t1 t2 = unifyFailure t1 t2
 
