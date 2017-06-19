@@ -257,6 +257,10 @@ w env (LCase term1 x1 x2 term2 term3) = do
                      , subs5 -.- subs4 -.- subs3 -.- subs2 -.- subs1
                      , cUnion (conSubstitute subs5 c3) $ cUnion (conSubstitute (subs5 -.- subs4) c2) (conSubstitute (subs5 -.- subs4 -.- subs3 -.- subs2) c1)
                      )
+w env (DType pi terms) = do
+    undefined -- FIXME(Reinier)
+w env (DTCase term1 xs term2 term3) = do
+    undefined -- FIXME(Reinier)
 w env (Fn pi x t1) = do
     a1 <- fresh
     (t2, subs, c1) <- w (envAppend x (TypeScheme Set.empty a1) env) t1

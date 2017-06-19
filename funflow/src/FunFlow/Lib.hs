@@ -9,7 +9,7 @@ import FunFlow.Parsing
 import FunFlow.TypeSystem
 
 run :: String -> IO ()
-run name = putStrLn =<< show <$> typeCheck <$> parse name
+run name = putStrLn =<< show <$> parse name
 
 typeCheck :: Expr -> (Type, Constraints, Expr)
 typeCheck p =

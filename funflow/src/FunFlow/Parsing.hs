@@ -21,7 +21,7 @@ parseExpr = runParser "stdin" pExpr
 
 -- * Parsing the FUN language
 pExpr :: Parser Expr
-pExpr = (pFn <|> pFun <|> pITE <|> pLet <|> pPair <|> pPCase <|> pCons <|> pNil <|> pLCase) <<|> pBin
+pExpr = (pFn <|> pFun <|> pITE <|> pLet <|> pPair <|> pPCase <|> pCons <|> pNil <|> pLCase <|> pDType <|> pDTCase) <<|> pBin
   where
 
   -- literal expressions
@@ -35,7 +35,7 @@ pExpr = (pFn <|> pFun <|> pITE <|> pLet <|> pPair <|> pPCase <|> pCons <|> pNil 
      <<|> pParens pExpr
 
   -- simple expressions
-  pFn, pFun, pLet, pITE, pPair, pPCase, pCons, pNil, pLCase :: Parser Expr
+  pFn, pFun, pLet, pITE, pPair, pPCase, pCons, pNil, pLCase, pDType, pDTCase :: Parser Expr
   pFn     = iI (Fn 0) "fn" pIdent "=>" pExpr Ii -- Default Pi to 0
   pFun    = iI (Fun 0) "fun" pIdent pIdent "=>" pExpr Ii -- Dito
   pLet    = iI Let "let" pIdent "=" pExpr "in" pExpr Ii
@@ -45,7 +45,8 @@ pExpr = (pFn <|> pFun <|> pITE <|> pLet <|> pPair <|> pPCase <|> pCons <|> pNil 
   pCons   = iI (Cons 0) "Cons" "(" pExpr "," pExpr ")" Ii
   pNil    = (Nil 0) <$ pSymbol "Nil"
   pLCase  = iI LCase "lcase" pExpr "of" "Cons" "(" pIdent "," pIdent ")" "=>" pExpr "or" pExpr Ii
-
+  pDType  = iI (DType 0) "C" "(" (pListSep (pSymbol ",") pExpr) ")" Ii
+  pDTCase = iI DTCase "case" pExpr "of" "C" "(" (pListSep (pSymbol ",") pIdent) "=>" pExpr "or" pExpr Ii
 
   -- chained expressions
   pApp = pChainl_ng (App <$ pSpaces) pAtom

@@ -15,6 +15,8 @@ data Expr
   | Cons    Pi   Expr Expr
   | Nil     Pi
   | LCase   Expr Name Name Expr Expr
+  | DType   Pi   [Expr]
+  | DTCase  Expr [Name] Expr Expr
   | Var     Name
   | Fun     Pi   Name Name Expr
   | Fn      Pi   Name Expr
