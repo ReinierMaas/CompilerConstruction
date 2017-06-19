@@ -48,7 +48,7 @@ data TypeSubstitution = TypeSubstitution (Map Int Type, Map AnnVar AnnVar) deriv
 (-$-) (TypeSubstitution (m, _)) (Alpha t) = case Map.lookup t m of
                                                 Just t' -> t'
                                                 Nothing -> Alpha t
-(-$-) ts@(TypeSubstitution (m, c)) (TypeFn t1 b t2) =
+(-$-) ts (TypeFn t1 b t2) =
     let t1' = ts -$- t1
         t2' = ts -$- t2
         b' = ts -$$- b
