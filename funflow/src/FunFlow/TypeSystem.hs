@@ -51,9 +51,7 @@ data TypeSubstitution = TypeSubstitution (Map Int Type, Map AnnVar AnnVar) deriv
 (-$-) ts@(TypeSubstitution (m, c)) (TypeFn t1 b t2) =
     let t1' = ts -$- t1
         t2' = ts -$- t2
-        b' = case Map.lookup b c of
-                Just b' -> b'
-                Nothing -> b
+        b' = ts -$$- b
     in TypeFn t1' b' t2'
 (-$-) _ t = t
 
@@ -157,7 +155,7 @@ tryUnify (Alpha x) (Alpha y) = Right $ substitute x (Alpha y)
 tryUnify (TypeFn t1 b1 t2) (TypeFn t3 b2 t4) = do
     let subs0 = bSubstitute b1 b2
     subs1 <- tryUnify (subs0 -$- t1) (subs0 -$- t3)
-    subs2 <- tryUnify (subs1 -$- (subs0 -$- t2)) (subs1 -$- (subs0 -$- t4))
+    subs2 <- tryUnify (subs1 -.- subs0 -$- t2) (subs1 -.- subs0 -$- t4)
     Right $ subs2 -.- subs1 -.- subs0
 tryUnify (Alpha x) t = if not (x `isFreeIn` t)
                        then Right (substitute x t)
@@ -197,7 +195,10 @@ w env (Fn pi x t1) = do
     a1 <- fresh
     (t2, subs, c1) <- w (envAppend x (TypeScheme Set.empty a1) env) t1
     b <- freshAnnVar
-    return $ debug $ (TypeFn (subs -$- a1) b t2, subs, cUnion c1 (cSuperset b (AnnVar pi)))
+    return $ debug $ ( TypeFn (subs -$- a1) b t2
+                     , subs
+                     , cUnion c1 (cSuperset b (AnnVar pi))
+                     )
 w env (Fun pi f x t1) = do
     a1 <- fresh
     a2 <- fresh
