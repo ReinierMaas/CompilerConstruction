@@ -54,6 +54,10 @@ data TypeSubstitution = TypeSubstitution (Map Int Type, Map AnnVar AnnVar) deriv
         t2' = ts -$- t2
         b' = ts -$$- b
     in TypeFn t1' b' t2'
+(-$-) ts@(TypeSubstitution (m, c)) (TypeGeneral b t) =
+    let t' = map (ts -$-) t
+        b' = ts -$$- b
+    in  TypeGeneral b' t'
 (-$-) _ t = t
 
 (-$$-) :: TypeSubstitution -> AnnVar -> AnnVar
@@ -157,7 +161,9 @@ tryUnify TypeInt TypeInt = Right idSub
 tryUnify TypeBool TypeBool = Right idSub
 tryUnify (TypeGeneral b1 types1) (TypeGeneral b2 types2) = do
     let subs0 = bSubstitute b1 b2
-    foldr f (Right subs0) $ zip types1 types2
+    if length types1 == length types2
+    then foldr f (Right subs0) $ zip types1 types2
+    else unifyFailure types1 types2
     where
         f :: (Type, Type) -> Either String TypeSubstitution -> Either String TypeSubstitution
         f (t1, t2) (Right prevSub) = (-.- prevSub) <$> tryUnify (prevSub -$- t1) (prevSub -$- t2)
@@ -221,6 +227,35 @@ w env (PCase term1 x1 x2 term2) = do
     return $ debug $ ( t2
                      , subs2 -.- subs1
                      , cUnion c2 (conSubstitute subs2 c1)
+                     )
+w env (Cons pi term1 term2) = do
+    (t1, subs1, c1) <- w env term1
+    (t2, subs2, c2) <- w (envSubstitute subs1 env) term2
+    b <- freshAnnVar
+    let subs3 = unify (TypeGeneral b [subs2 -$- t1]) t2
+    return $ debug $ ( subs3 -$- t2
+                     , subs3 -.- subs2 -.- subs1
+                     , cUnion (cUnion (conSubstitute subs3 c2) (conSubstitute (subs3 -.- subs2) c1)) (cSuperset b (AnnVar pi))
+                     )
+w env (Nil pi) = do
+    a <- fresh
+    b <- freshAnnVar
+    return $ debug $ ( TypeGeneral b [a]
+                     , idSub
+                     , cSuperset b (AnnVar pi)
+                     )
+w env (LCase term1 x1 x2 term2 term3) = do
+    (t1, subs1, c1) <- w env term1
+    a <- fresh
+    b <- freshAnnVar
+    let env1 = (envAppend' [(x1, TypeScheme Set.empty a), (x2, TypeScheme Set.empty (TypeGeneral b [a]))] (envSubstitute subs1 env))
+    let subs2 = unify t1 (TypeGeneral b [a])
+    (t2, subs3, c2) <- w (envSubstitute subs2 env1) term2
+    (t3, subs4, c3) <- w (envSubstitute (subs3 -.- subs2) env1) term3
+    let subs5 = unify (subs4 -$- t2) t3
+    return $ debug $ ( subs5 -$- t3
+                     , subs5 -.- subs4 -.- subs3 -.- subs2 -.- subs1
+                     , cUnion (conSubstitute subs5 c3) $ cUnion (conSubstitute (subs5 -.- subs4) c2) (conSubstitute (subs5 -.- subs4 -.- subs3 -.- subs2) c1)
                      )
 w env (Fn pi x t1) = do
     a1 <- fresh
@@ -290,4 +325,5 @@ opTypes op | op `elem` [Add, Sub, Mul, Div] = (TypeInt, TypeInt, TypeInt)
            | otherwise = error "This is impossible"
 
 debug :: Show a => a -> a
-debug = id --Debug.traceShowId
+--debug = Debug.traceShowId
+debug = id
