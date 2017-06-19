@@ -6,12 +6,13 @@ import FunFlow.TypeSystem
 examples :: [(String, Type)]
 examples = [ ("add", TypeInt)
            , ("apply_id", TypeInt)
-           , ("id", TypeFn (Alpha 0) Set.empty (Alpha 0))
-           , ("fun_id", TypeFn (Alpha 0) Set.empty (Alpha 0))
-           , ("fun_if", TypeFn (Alpha 0) Set.empty (Alpha 0))
+           , ("id", TypeFn (Alpha 0) (AnnVar 1) (Alpha 0))
+           , ("if_fn", TypeFn (Alpha 0) (AnnVar 1) (Alpha 0))
+           , ("fun_id", TypeFn (Alpha 0) (AnnVar 1) (Alpha 0))
+           , ("fun_if", TypeFn (Alpha 0) (AnnVar 1) (Alpha 0))
            , ("if_let", TypeInt)
            , ("let_bool", TypeBool)
-           , ("let_id", TypeFn (Alpha 0) Set.empty (Alpha 0))
+           , ("let_id", TypeFn (Alpha 0) (AnnVar 1) (Alpha 0))
            , ("let_if", TypeInt)
            , ("let_int", TypeInt)
            , ("let_x", TypeInt)
@@ -26,11 +27,12 @@ main = do
 
 checkExample :: (String, Type) -> IO Bool
 checkExample (name, expectedType) = do
-    let path = "examples/" ++ name ++ ".fun"
-    t <- typeCheck path
+    p <- parse $ "examples/" ++ name ++ ".fun"
+    let (t, c, p') = typeCheck p
     case tryUnify t expectedType of
         Right _ -> do
-            putStrLn $ "Passed (" ++ name ++ ") with type " ++ show t
+            putStrLn $ "Passed (" ++ name ++ ") with type " ++ show t ++ ". Constraints: " ++ show c
+            putStrLn $ "Ast: " ++ show p'
             return True
         Left err -> do
             putStrLn $ "Failed (" ++ name ++ "):" ++ err

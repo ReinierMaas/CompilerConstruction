@@ -37,33 +37,69 @@ envSubstitute sub env = Map.map applyOnScheme env
     applyOnType ns a@(Alpha x) = ns -$- a
 
 {- Substitutions -}
-newtype TypeSubstitution = TypeSubstitution (Map Int Type) deriving (Show)
+data TypeSubstitution = TypeSubstitution (Map Int Type, Map AnnVar AnnVar) deriving (Show)
 
 (-.-) :: TypeSubstitution -> TypeSubstitution -> TypeSubstitution
-(-.-) (TypeSubstitution m1) (TypeSubstitution m2) = TypeSubstitution (Map.union m1 m2)
+(-.-) last@(TypeSubstitution (m1, c1)) (TypeSubstitution (m2, c2)) =
+    TypeSubstitution ( Map.union m1 (Map.map (last -$-) m2)
+                     , Map.union c1 (Map.map (last -$$-) c2))
 
 (-$-) :: TypeSubstitution -> Type -> Type
-(-$-) (TypeSubstitution m) (Alpha t) = case Map.lookup t m of
-                                            Just t' -> t'
-                                            Nothing -> Alpha t
+(-$-) (TypeSubstitution (m, _)) (Alpha t) = case Map.lookup t m of
+                                                Just t' -> t'
+                                                Nothing -> Alpha t
+(-$-) ts@(TypeSubstitution (m, c)) (TypeFn t1 b t2) =
+    let t1' = ts -$- t1
+        t2' = ts -$- t2
+        b' = case Map.lookup b c of
+                Just b' -> b'
+                Nothing -> b
+    in TypeFn t1' b' t2'
 (-$-) _ t = t
 
+(-$$-) :: TypeSubstitution -> AnnVar -> AnnVar
+(-$$-) (TypeSubstitution (_, c)) b = case Map.lookup b c of
+                                        Just b' -> b'
+                                        Nothing -> b
+
 idSub :: TypeSubstitution
-idSub = TypeSubstitution Map.empty
+idSub = TypeSubstitution (Map.empty, Map.empty)
 
 substituteMany :: Set Int -> TypeSubstitution -> TypeSubstitution
-substituteMany as ts = TypeSubstitution (Map.fromSet Alpha as) -.- ts
+substituteMany as ts = TypeSubstitution (Map.fromSet Alpha as, Map.empty) -.- ts
 
 substitute :: Int -> Type -> TypeSubstitution
-substitute x t2 = TypeSubstitution $ Map.singleton x t2
+substitute x t2 = TypeSubstitution (Map.singleton x t2, Map.empty)
+
+bSubstitute :: AnnVar -> AnnVar -> TypeSubstitution
+bSubstitute b1 b2 = TypeSubstitution (Map.empty, Map.singleton b1 b2)
 
 {- Constraints and annotations -}
-type Annotation = Set Int
+newtype AnnVar = AnnVar Int deriving (Eq, Ord)
+instance Show AnnVar where
+    show (AnnVar x) = show x
+
+data Constraints = Constraints (Map AnnVar (Set AnnVar))
+
+instance Show Constraints where
+    show (Constraints c) = show $ Map.toList $ Map.map Set.toList c
+
+cEmpty :: Constraints
+cEmpty = Constraints Map.empty
+
+cUnion :: Constraints -> Constraints -> Constraints
+cUnion (Constraints c1) (Constraints c2) = Constraints $ Map.unionWith (Set.union) c1 c2
+
+cSuperset :: AnnVar -> AnnVar -> Constraints
+cSuperset av x = Constraints $ Map.singleton av (Set.singleton x)
+
+conSubstitute :: TypeSubstitution -> Constraints -> Constraints
+conSubstitute ts (Constraints c) = Constraints $ Map.map (Set.map (ts -$$-)) c
 
 {- Types and schemes -}
 data Type = TypeInt
           | TypeBool
-          | TypeFn Type Int Type
+          | TypeFn Type AnnVar Type
           | Alpha Int
           deriving (Eq, Ord)
 
@@ -118,10 +154,11 @@ tryUnify :: Type -> Type -> Either String TypeSubstitution
 tryUnify TypeInt TypeInt = Right idSub
 tryUnify TypeBool TypeBool = Right idSub
 tryUnify (Alpha x) (Alpha y) = Right $ substitute x (Alpha y)
-tryUnify (TypeFn t1 _ t2) (TypeFn t3 _ t4) = do
-    subs1 <- tryUnify t1 t3
-    subs2 <- tryUnify (subs1 -$- t2) (subs1 -$- t4)
-    Right $ subs2 -.- subs1
+tryUnify (TypeFn t1 b1 t2) (TypeFn t3 b2 t4) = do
+    let subs0 = bSubstitute b1 b2
+    subs1 <- tryUnify (subs0 -$- t1) (subs0 -$- t3)
+    subs2 <- tryUnify (subs1 -$- (subs0 -$- t2)) (subs1 -$- (subs0 -$- t4))
+    Right $ subs2 -.- subs1 -.- subs0
 tryUnify (Alpha x) t = if not (x `isFreeIn` t)
                        then Right (substitute x t)
                        else unifyFailure (Alpha x) t
@@ -137,10 +174,7 @@ isFreeIn _ _ = False
 
 {- W algorithm for Hilney Miler type inference -}
 fresh :: State Int Type
-fresh = do
-    x <- get
-    put $ x + 1
-    return $ Alpha x
+fresh = Alpha <$> freshInt
 
 freshInt :: State Int Int
 freshInt = do
@@ -148,60 +182,80 @@ freshInt = do
     put $ x + 1
     return $ x
 
-w :: TypeEnv -> Expr -> State Int (Type, TypeSubstitution)
-w env (Int _) =  do
-    return $ debug $ (TypeInt, idSub)
-w env (Bool _) =  do
-    return $ debug $ (TypeBool, idSub)
+freshAnnVar :: State Int AnnVar
+freshAnnVar = AnnVar <$> freshInt
+
+w :: TypeEnv -> Expr -> State Int (Type, TypeSubstitution, Constraints)
+w env (Int _) = return $ debug $ (TypeInt, idSub, cEmpty)
+w env (Bool _) = return $ debug $ (TypeBool, idSub, cEmpty)
 w env (Var x) = case envLookup x env of
                     Just ts -> do
                         t <- instantiate ts
-                        return $ debug $ (t, idSub)
+                        return $ debug $ (t, idSub, cEmpty)
                     Nothing -> error $ "x : " ++ show x ++ " not found in environment"  -- See slides on page 24. Unclear how to implement.
 w env (Fn pi x t1) = do
     a1 <- fresh
-    (t2, subs) <- w (envAppend x (TypeScheme Set.empty a1) env) t1
-    return $ debug $ (TypeFn (subs -$- a1) pi t2, subs)
+    (t2, subs, c1) <- w (envAppend x (TypeScheme Set.empty a1) env) t1
+    b <- freshAnnVar
+    return $ debug $ (TypeFn (subs -$- a1) b t2, subs, cUnion c1 (cSuperset b (AnnVar pi)))
 w env (Fun pi f x t1) = do
     a1 <- fresh
     a2 <- fresh
-    (t2, subs1) <- w (envAppend' [(f, TypeScheme Set.empty (TypeFn a1 pi a2)), (x, TypeScheme Set.empty a1)] env) t1
+    b <- freshAnnVar
+    (t2, subs1, c1) <- w (envAppend' [(f, TypeScheme Set.empty (TypeFn a1 b a2)), (x, TypeScheme Set.empty a1)] env) t1
     let subs2 = unify t2 (subs1 -$- a2)
-    return $ debug $ (TypeFn (subs2 -$- (subs1 -$- a1)) pi (subs2 -$- t2), subs2 -.- subs1)
+    return $ debug $ ( TypeFn (subs2 -.- subs1 -$- a1) (subs2 -.- subs1 -$$- b) (subs2 -$- t2)
+                     , subs2 -.- subs1
+                     , cUnion (conSubstitute subs2 c1) (cSuperset (subs2 -.- subs1 -$$- b) (AnnVar pi))
+                     )
 w env (App term1 term2) = do
-    (t1, subs1) <- w env term1
-    (t2, subs2) <- w (envSubstitute subs1 env) term2
+    (t1, subs1, c1) <- w env term1
+    (t2, subs2, c2) <- w (envSubstitute subs1 env) term2
     a <- fresh
-    pi <- freshInt
+    pi <- freshAnnVar
     let subs3 = unify (subs2 -$- t1) (TypeFn t2 pi a)
-    return $ debug $ (subs3 -$- a, subs3 -.- subs2 -.- subs1)
+    return $ debug $ ( subs3 -$- a
+                     , subs3 -.- subs2 -.- subs1
+                     , cUnion (conSubstitute subs3 c2) (conSubstitute (subs3 -.- subs2) c1)
+                     )
 w env (ITE term1 term2 term3) = do
-    (t1, subs1) <- w env term1
+    (t1, subs1, c1) <- w env term1
     let env1 = envSubstitute subs1 env
-    (t2, subs2) <- w env1 term2
+    (t2, subs2, c2) <- w env1 term2
     let env2 = envSubstitute subs2 env1
-    (t3, subs3) <- w env2 term3
-    let subs4 = unify (subs3 -$- (subs2 -$- t1)) TypeBool
-    let subs5 = unify (subs4 -$- (subs3 -$- t2)) (subs4 -$- t3)
-    return $ debug $ (subs5 -$- (subs4 -$- t3), subs5 -.- subs4 -.- subs3 -.- subs2 -.- subs1)
+    (t3, subs3, c3) <- w env2 term3
+    let subs4 = unify (subs3 -.- subs2 -$- t1) TypeBool
+    let subs5 = unify (subs4 -.- subs3 -$- t2) (subs4 -$- t3)
+    return $ debug $ ( subs5 -.- subs4 -$- t3
+                     , subs5 -.- subs4 -.- subs3 -.- subs2 -.- subs1
+                     , cUnion (conSubstitute (subs5 -.- subs4) c3)
+                        (cUnion (conSubstitute (subs5 -.- subs4 -.- subs3) c2)
+                        (conSubstitute (subs5 -.- subs4 -.- subs3 -.- subs2) c1))
+                     )
 w env (Let x term1 term2) = do
-    (t1, subs1) <- w env term1 -- term1: 42 :: Int
+    (t1, subs1, c1) <- w env term1
     let env1 = envSubstitute subs1 env
     let env2 = debug $ envAppend x (generalize env1 t1) env1
-    (t2, subs2) <- w env2 term2 -- term2: ITE
-    return $ debug $ (t2, subs2 -.- subs1)
+    (t2, subs2, c2) <- w env2 term2
+    return $ debug $ ( t2
+                     , subs2 -.- subs1
+                     , cUnion c2 (conSubstitute subs2 c1)
+                     )
 w env (Oper op term1 term2) = do
-    (t1, subs1) <- w env term1
+    (t1, subs1, c1) <- w env term1
     let env1 = envSubstitute subs1 env
-    (t2, subs2) <- w env1 term2
+    (t2, subs2, c2) <- w env1 term2
     let (param1, param2, ret) = opTypes op
     let subs3 = unify (subs2 -$- t1) param1
     let subs4 = unify (subs3 -$- t2) param2
-    return $ debug $ (ret, subs4 -.- subs3 -.- subs2 -.- subs1)
+    return $ debug $ ( ret
+                     , subs4 -.- subs3 -.- subs2 -.- subs1
+                     , cUnion (conSubstitute (subs4 -.- subs3) c2) (conSubstitute (subs4 -.- subs3 -.- subs2) c1)
+                     )
 
 opTypes :: Op -> (Type, Type, Type)
 opTypes op | op `elem` [Add, Sub, Mul, Div] = (TypeInt, TypeInt, TypeInt)
            | otherwise = error "This is impossible"
 
 debug :: Show a => a -> a
-debug = id --Debug.traceShowId
+debug = Debug.traceShowId

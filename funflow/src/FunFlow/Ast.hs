@@ -19,7 +19,6 @@ data Expr
   | Oper    Op   Expr Expr
   deriving (Eq,Show)
 
-
 bin :: Name -> Expr -> Expr -> Expr
 bin op x y = Oper r x y where
   r = case op of
