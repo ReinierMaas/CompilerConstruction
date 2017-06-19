@@ -10,6 +10,8 @@ type Name  = String  -- For identifier names
 data Expr
   = Int Int
   | Bool    Bool
+  | Pair    Pi   Expr Expr
+  | PCase   Expr Name Name Expr
   | Var     Name
   | Fun     Pi   Name Name Expr
   | Fn      Pi   Name Expr
@@ -26,5 +28,6 @@ bin op x y = Oper r x y where
         "-" -> Sub
         "*" -> Mul
         "/" -> Div
+        _   -> error "Undefined binary operator"
 
 

@@ -16,6 +16,9 @@ examples = [ ("add", TypeInt)
            , ("let_if", TypeInt)
            , ("let_int", TypeInt)
            , ("let_x", TypeInt)
+           , ("pair", TypeGeneral (AnnVar 1) [TypeInt, TypeBool])
+           , ("pcase", TypeInt)
+           , ("pcase_fn", TypeFn TypeInt (AnnVar 1) TypeInt)
            ]
 
 main :: IO ()

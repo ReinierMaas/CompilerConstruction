@@ -30,6 +30,7 @@ library
                   , containers >= 0.5
   hs-source-dirs  : src
   extensions      : DoAndIfThenElse
+  ghc-options     : -fwarn-incomplete-patterns
 
 test-suite funflow-test
   type:                exitcode-stdio-1.0
