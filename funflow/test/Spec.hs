@@ -31,8 +31,9 @@ checkExample (name, expectedType) = do
     let (t, c, p') = typeCheck p
     case tryUnify t expectedType of
         Right _ -> do
-            putStrLn $ "Passed (" ++ name ++ ") with type " ++ show t ++ ". Constraints: " ++ show c
-            putStrLn $ "Ast: " ++ show p'
+            putStrLn $ "Passed (" ++ name ++ ") with type " ++ show t
+            putStrLn $ "=> ast: " ++ show p'
+            putStrLn $ "=> constraints: " ++ show c
             return True
         Left err -> do
             putStrLn $ "Failed (" ++ name ++ "):" ++ err

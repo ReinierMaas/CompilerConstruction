@@ -92,7 +92,7 @@ cSuperset :: AnnVar -> AnnVar -> Constraints
 cSuperset av x = Constraints $ Map.singleton av (Set.singleton x)
 
 conSubstitute :: TypeSubstitution -> Constraints -> Constraints
-conSubstitute ts (Constraints c) = Constraints $ Map.map (Set.map (ts -$$-)) c
+conSubstitute ts (Constraints c) = Constraints $ Map.mapKeysWith (Set.union) (ts -$$-) c
 
 {- Types and schemes -}
 data Type = TypeInt
@@ -259,4 +259,4 @@ opTypes op | op `elem` [Add, Sub, Mul, Div] = (TypeInt, TypeInt, TypeInt)
            | otherwise = error "This is impossible"
 
 debug :: Show a => a -> a
-debug = Debug.traceShowId
+debug = id --Debug.traceShowId
