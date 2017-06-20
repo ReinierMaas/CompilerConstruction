@@ -1,6 +1,7 @@
 module FunFlow.TypeSystem where
 
 import FunFlow.Ast
+import Control.Monad (foldM)
 import Control.Monad.State.Lazy (State, get, put)
 import Data.Function (fix)
 import Data.List (find, intercalate)
@@ -210,7 +211,9 @@ w env (Var x) = case envLookup x env of
                     Nothing -> error $ "x : " ++ show x ++ " not found in environment"
 w env (Pair pi term1 term2) = do
     (t1, subs1, c1) <- w env term1
+
     (t2, subs2, c2) <- w (envSubstitute subs1 env) term2
+
     b <- freshAnnVar
     return $ debug $ ( TypeGeneral b [subs2 -$- t1, t2]
                      , subs2 -.- subs1
@@ -223,10 +226,10 @@ w env (PCase term1 x1 x2 term2) = do
     b <- freshAnnVar
     let env1 = (envAppend' [(x1, TypeScheme Set.empty a1), (x2, TypeScheme Set.empty a2)] (envSubstitute subs1 env))
     let subs2 = unify t1 (TypeGeneral b [a1, a2])
-    (t2, subs2, c2) <- w (envSubstitute subs2 env1) term2
+    (t2, subs3, c2) <- w (envSubstitute subs2 env1) term2
     return $ debug $ ( t2
-                     , subs2 -.- subs1
-                     , cUnion c2 (conSubstitute subs2 c1)
+                     , subs3 -.- subs2 -.- subs1
+                     , cUnion c2 (conSubstitute (subs3 -.- subs2) c1)
                      )
 w env (Cons pi term1 term2) = do
     (t1, subs1, c1) <- w env term1
@@ -258,9 +261,27 @@ w env (LCase term1 x1 x2 term2 term3) = do
                      , cUnion (conSubstitute subs5 c3) $ cUnion (conSubstitute (subs5 -.- subs4) c2) (conSubstitute (subs5 -.- subs4 -.- subs3 -.- subs2) c1)
                      )
 w env (DType pi terms) = do
-    undefined -- FIXME(Reinier)
+    (types, subs, cs) <- foldM (\(types, subs, cs) term -> do
+        (t, s, c) <- w (envSubstitute subs env) term
+        return (types ++ [t], s -.- subs, cUnion c (conSubstitute (s -.- subs) cs))) ([], idSub, cEmpty) terms
+    b <- freshAnnVar
+    return $ debug $ ( TypeGeneral b types
+                     , subs
+                     , cs
+                     )
 w env (DTCase term1 xs term2 term3) = do
-    undefined -- FIXME(Reinier)
+    (t1, subs1, c1) <- w env term1
+    as <- sequence $ take (length xs) $ repeat fresh
+    b <- freshAnnVar
+    let env1 = (envAppend' (zip xs (map (TypeScheme Set.empty) as)) (envSubstitute subs1 env))
+    let subs2 = unify t1 (TypeGeneral b as)
+    (t2, subs3, c2) <- w (envSubstitute subs2 env1) term2
+    (t3, subs4, c3) <- w (envSubstitute (subs3 -.- subs2) env1) term3
+    let subs5 = unify (subs4 -$- t2) t3
+    return $ debug $ ( subs5 -$- t3
+                     , subs5 -.- subs4 -.- subs3 -.- subs2 -.- subs1
+                     , cUnion c2 (conSubstitute (subs3 -.- subs2) c1)
+                     )
 w env (Fn pi x t1) = do
     a1 <- fresh
     (t2, subs, c1) <- w (envAppend x (TypeScheme Set.empty a1) env) t1
