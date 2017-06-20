@@ -1,0 +1,1 @@
+let k = fn x => x + 1 in (fun f zs => lcase zs of Cons(x,xs) => Cons(k x,f xs) or Nil) (Cons(42,Cons(1,Nil)))
