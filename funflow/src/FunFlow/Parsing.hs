@@ -32,6 +32,7 @@ pExpr = (pFn <|> pFun <|> pITE <|> pLet <|> pPair <|> pPCase <|> pCons <|> pNil 
   -- atomic expressions
   pAtom = pLit
      <<|> Var <$> pIdent
+     <<|> pDType
      <<|> pParens pExpr
 
   -- simple expressions
@@ -46,7 +47,7 @@ pExpr = (pFn <|> pFun <|> pITE <|> pLet <|> pPair <|> pPCase <|> pCons <|> pNil 
   pNil    = (Nil 0) <$ pSymbol "Nil"
   pLCase  = iI LCase "lcase" pExpr "of" "Cons" "(" pIdent "," pIdent ")" "=>" pExpr "or" pExpr Ii
   pDType  = iI (DType 0) "C" "(" (pListSep (pSymbol ",") pExpr) ")" Ii
-  pDTCase = iI DTCase "case" pExpr "of" "C" "(" (pListSep (pSymbol ",") pIdent) "=>" pExpr "or" pExpr Ii
+  pDTCase = iI DTCase "case" pExpr "of" "C" "(" (pListSep (pSymbol ",") pIdent) ")" "=>" pExpr "or" pExpr Ii
 
   -- chained expressions
   pApp = pChainl_ng (App <$ pSpaces) pAtom
