@@ -35,7 +35,7 @@ envSubstitute sub env = Map.map applyOnScheme env
     applyOnType ns (TypeInt) = TypeInt
     applyOnType ns (TypeBool) = TypeBool
     applyOnType ns (TypeFn t1 pi t2) = TypeFn (applyOnType ns t1) pi (applyOnType ns t2)
-    applyOnType ns (TypeGeneral pi types) = TypeGeneral pi $ map (applyOnType ns) types
+    applyOnType ns (TypeTuple pi types) = TypeTuple pi $ map (applyOnType ns) types
     applyOnType ns a@(Alpha x) = ns -$- a
 
 {- Substitutions -}
@@ -55,10 +55,10 @@ data TypeSubstitution = TypeSubstitution (Map Int Type, Map AnnVar AnnVar) deriv
         t2' = ts -$- t2
         b' = ts -$$- b
     in TypeFn t1' b' t2'
-(-$-) ts@(TypeSubstitution (m, c)) (TypeGeneral b t) =
+(-$-) ts@(TypeSubstitution (m, c)) (TypeTuple b t) =
     let t' = map (ts -$-) t
         b' = ts -$$- b
-    in  TypeGeneral b' t'
+    in  TypeTuple b' t'
 (-$-) _ t = t
 
 (-$$-) :: TypeSubstitution -> AnnVar -> AnnVar
@@ -104,7 +104,7 @@ conSubstitute ts (Constraints c) = Constraints $ Map.mapKeysWith (Set.union) (ts
 data Type = TypeInt
           | TypeBool
           | TypeFn Type AnnVar Type
-          | TypeGeneral AnnVar [Type]
+          | TypeTuple AnnVar [Type]
           | Alpha Int
           deriving (Eq, Ord)
 
@@ -117,7 +117,7 @@ instance Show Type where
     show (TypeInt) = "Int"
     show (TypeBool) = "Bool"
     show (TypeFn t1 pi t2) = show t1 ++ " " ++ show pi ++ "-> " ++ show t2
-    show (TypeGeneral pi types) = "TypeGeneral (" ++ show pi ++ ") " ++ show types
+    show (TypeTuple pi types) = "TypeTuple (" ++ show pi ++ ") " ++ show types
     show (Alpha a) = "a" ++ show a
 
 {- Generalization -}
@@ -148,7 +148,7 @@ instantiate (TypeScheme as t) = inst <$> dict <*> pure t
                                         Nothing -> alpha
                                         Just b -> b
     inst d (TypeFn a pi b) = TypeFn (inst d a) pi (inst d b)
-    inst d (TypeGeneral pi types) = TypeGeneral pi $ map (inst d) types
+    inst d (TypeTuple pi types) = TypeTuple pi $ map (inst d) types
 
 {- Unification -}
 unify :: Type -> Type -> TypeSubstitution
@@ -160,7 +160,7 @@ unify t1 t2 = fromEither $ tryUnify t1 t2
 tryUnify :: Type -> Type -> Either String TypeSubstitution
 tryUnify TypeInt TypeInt = Right idSub
 tryUnify TypeBool TypeBool = Right idSub
-tryUnify (TypeGeneral b1 types1) (TypeGeneral b2 types2) = do
+tryUnify (TypeTuple b1 types1) (TypeTuple b2 types2) = do
     let subs0 = bSubstitute b1 b2
     if length types1 == length types2
     then foldr f (Right subs0) $ zip types1 types2
@@ -215,7 +215,7 @@ w env (Pair pi term1 term2) = do
     (t2, subs2, c2) <- w (envSubstitute subs1 env) term2
 
     b <- freshAnnVar
-    return $ debug $ ( TypeGeneral b [subs2 -$- t1, t2]
+    return $ debug $ ( TypeTuple b [subs2 -$- t1, t2]
                      , subs2 -.- subs1
                      , cUnion (cUnion c2 ((conSubstitute subs2) c1)) (cSuperset b (AnnVar pi))
                      )
@@ -225,7 +225,7 @@ w env (PCase term1 x1 x2 term2) = do
     a2 <- fresh
     b <- freshAnnVar
     let env1 = (envAppend' [(x1, TypeScheme Set.empty a1), (x2, TypeScheme Set.empty a2)] (envSubstitute subs1 env))
-    let subs2 = unify t1 (TypeGeneral b [a1, a2])
+    let subs2 = unify t1 (TypeTuple b [a1, a2])
     (t2, subs3, c2) <- w (envSubstitute subs2 env1) term2
     return $ debug $ ( t2
                      , subs3 -.- subs2 -.- subs1
@@ -235,7 +235,7 @@ w env (Cons pi term1 term2) = do
     (t1, subs1, c1) <- w env term1
     (t2, subs2, c2) <- w (envSubstitute subs1 env) term2
     b <- freshAnnVar
-    let subs3 = unify (TypeGeneral b [subs2 -$- t1]) t2
+    let subs3 = unify (TypeTuple b [subs2 -$- t1]) t2
     return $ debug $ ( subs3 -$- t2
                      , subs3 -.- subs2 -.- subs1
                      , cUnion (cUnion (conSubstitute subs3 c2) (conSubstitute (subs3 -.- subs2) c1)) (cSuperset b (AnnVar pi))
@@ -243,7 +243,7 @@ w env (Cons pi term1 term2) = do
 w env (Nil pi) = do
     a <- fresh
     b <- freshAnnVar
-    return $ debug $ ( TypeGeneral b [a]
+    return $ debug $ ( TypeTuple b [a]
                      , idSub
                      , cSuperset b (AnnVar pi)
                      )
@@ -251,8 +251,8 @@ w env (LCase term1 x1 x2 term2 term3) = do
     (t1, subs1, c1) <- w env term1
     a <- fresh
     b <- freshAnnVar
-    let env1 = (envAppend' [(x1, TypeScheme Set.empty a), (x2, TypeScheme Set.empty (TypeGeneral b [a]))] (envSubstitute subs1 env))
-    let subs2 = unify t1 (TypeGeneral b [a])
+    let env1 = (envAppend' [(x1, TypeScheme Set.empty a), (x2, TypeScheme Set.empty (TypeTuple b [a]))] (envSubstitute subs1 env))
+    let subs2 = unify t1 (TypeTuple b [a])
     (t2, subs3, c2) <- w (envSubstitute subs2 env1) term2
     (t3, subs4, c3) <- w (envSubstitute (subs3 -.- subs2) env1) term3
     let subs5 = unify (subs4 -$- t2) t3
@@ -265,7 +265,7 @@ w env (DType pi terms) = do
         (t, s, c) <- w (envSubstitute subs env) term
         return (types ++ [t], s -.- subs, cUnion c (conSubstitute (s -.- subs) cs))) ([], idSub, cEmpty) terms
     b <- freshAnnVar
-    return $ debug $ ( TypeGeneral b types
+    return $ debug $ ( TypeTuple b types
                      , subs
                      , cs
                      )
@@ -274,7 +274,7 @@ w env (DTCase term1 xs term2 term3) = do
     as <- sequence $ take (length xs) $ repeat fresh
     b <- freshAnnVar
     let env1 = (envAppend' (zip xs (map (TypeScheme Set.empty) as)) (envSubstitute subs1 env))
-    let subs2 = unify t1 (TypeGeneral b as)
+    let subs2 = unify t1 (TypeTuple b as)
     (t2, subs3, c2) <- w (envSubstitute subs2 env1) term2
     (t3, subs4, c3) <- w (envSubstitute (subs3 -.- subs2) env1) term3
     let subs5 = unify (subs4 -$- t2) t3
