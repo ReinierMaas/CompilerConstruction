@@ -72,7 +72,7 @@ Having just one representation is useful because it results in only one extra ca
 \bigskip
 \[
 \inferrule[Cons]
-{\hat{\Gamma} \vdash_{CFA} e_1 : \hat{\tau} \quad \hat{\Gamma} \vdash_{CFA} e_2 : \hat{\tau}}
+{\hat{\Gamma} \vdash_{CFA} e_1 : \hat{\tau} \quad \hat{\Gamma} \vdash_{CFA} e_2 : Tuple_\pi\ [\hat{\tau}]}
 {\hat{\Gamma} \vdash_{CFA} Cons_\pi(e_1, e_2) : Tuple_\pi\ [\hat{\tau}] }
 \]
 
@@ -86,8 +86,8 @@ Having just one representation is useful because it results in only one extra ca
 
 \[
 \inferrule[LCase]
-{\hat{\Gamma} \vdash_{CFA} e_0 : Tuple_\varphi\ [\hat{\tau}_1] \quad \hat{\Gamma}[x_1 \mapsto \hat{\tau}_1][x_2 \mapsto \hat{\tau}_1] \vdash_{CFA} e_1 : \hat{\tau}_2 \quad \hat{\Gamma} \vdash_{CFA} e_2 : \hat{\tau}_2}
-{\hat{\Gamma} \vdash_{CFA} lcase\ e_0\ of\ Cons(x_1, x_2) => e_1\ or\ e_2 : \hat{\tau}}
+{\hat{\Gamma} \vdash_{CFA} e_0 : Tuple_\varphi\ [\hat{\tau}_1] \quad \hat{\Gamma}[x_1 \mapsto \hat{\tau}_1][x_2 \mapsto Tuple_\varphi\ [\hat{\tau}_1]] \vdash_{CFA} e_1 : \hat{\tau}_2 \quad \hat{\Gamma} \vdash_{CFA} e_2 : \hat{\tau}_2}
+{\hat{\Gamma} \vdash_{CFA} lcase\ e_0\ of\ Cons(x_1, x_2) => e_1\ or\ e_2 : \hat{\tau}_2}
 \]
 
 \bigskip
