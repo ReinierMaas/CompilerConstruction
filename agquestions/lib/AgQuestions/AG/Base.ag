@@ -1,0 +1,50 @@
+imports
+{
+import Debug.Trace as Debug
+}
+{
+data Ty = Nat
+        | Fun Ty Ty
+    deriving (Show, Eq)
+
+type Env = [(String, Ty)]
+
+}
+data Expression
+    | Constant      constant    :: {Int}
+    | Variable      variable    :: {String}
+    | Application   expression1 :: Expression   expression2 :: Expression
+    | Lambda        identifier  :: {String}     ty          :: {Ty}         expression  :: Expression
+    | Let           identifier  :: {String}     ty          :: {Ty}         expression1 :: Expression   expression2 :: Expression
+
+deriving Expression : Show
+
+attr Expression inh env :: Env
+                syn ty  :: {Maybe Ty}
+
+sem  Expression | Constant      lhs.ty = Just Nat
+                | Variable      lhs.ty = (\x -> Debug.trace ("variable: " ++ show @variable ++ " in env: " ++ show @lhs.env ++ " returns type: " ++ show x) x) $ lookup @variable @lhs.env
+                | Application   lhs.ty = application @expression1.ty @expression2.ty
+                                expression1.env = @lhs.env
+                                expression2.env = @lhs.env
+                | Lambda        lhs.ty = Fun @ty <$> @expression.ty
+                                expression.env = (@identifier,@ty) : @lhs.env
+                | Let           lhs.ty = letType @ty @expression1.ty @expression2.ty
+                                expression1.env = @lhs.env
+                                expression2.env = (\x -> Debug.trace ("let expression2.env: " ++ show x) x) $ appendEnv (@identifier,@expression1.ty) @lhs.env
+
+{
+application :: Maybe Ty -> Maybe Ty -> Maybe Ty
+application (Just (Fun t1 t2)) (Just t3)    | t1 == t3  = Just t2
+                                            | otherwise = Debug.trace ("application (Fun t1:" ++ show t1 ++ " t2:" ++ show t2 ++ ") t3:" ++ show t3++ " | recieved Nothing(s) or t1 is not a function")Nothing
+application t1 t2 = Debug.trace ("application t1:" ++ show t1 ++ " t2:" ++ show t2 ++ " | recieved Nothing(s) or t1 is not a function")Nothing
+
+letType :: Ty -> Maybe Ty -> Maybe Ty -> Maybe Ty
+letType ty (Just t1) (Just t2)              | ty == t1  = Just t2
+                                            | otherwise = Debug.trace ("letType ty:" ++ show ty ++ " t1:" ++ show t1 ++ " t2:" ++ show t2 ++ " | ty != t1") Nothing
+letType ty t1 t2 = Debug.trace ("letType ty:" ++ show ty ++ " t1:" ++ show t1 ++ " t2:" ++ show t2 ++ " | recieved Nothing(s)") Nothing
+
+appendEnv :: (String, Maybe Ty) -> Env -> Env
+appendEnv (identifier, (Just ty)) env = (identifier, ty) : env
+appendEnv _ env = env
+}
